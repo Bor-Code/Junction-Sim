@@ -1,3 +1,4 @@
+from junction_sim.domain.vehicle import Vehicle
 from junction_sim.exceptions import (
     ConfigurationError,
     ControllerError,
@@ -20,5 +21,6 @@ __all__ = [
     "JunctionSimError",
     "SimulationError",
     "ValidationError",
+    "Vehicle",
     "__version__",
 ]
