@@ -1,3 +1,4 @@
+from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.protocol import (
     ControllerContext,
     ControllerDecision,
@@ -43,6 +44,7 @@ __all__ = [
     "ControllerError",
     "DemandProfile",
     "Direction",
+    "FixedTimeController",
     "Intersection",
     "InvalidGeometryError",
     "InvalidSignalPlanError",
