@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.domain.validation import validate_signal_plan_against_intersection
@@ -146,3 +148,23 @@ class SimulationEngine:
             discharged_vehicles=tuple(discharged_vehicles),
             queue_lengths=queue_lengths,
         )
+
+    def run_iter(self, duration: float) -> Iterator[StepResult]:
+        if duration <= 0.0:
+            raise ValidationError("duration must be greater than zero")
+
+        steps = round(duration / self._step_size)
+        if abs(steps * self._step_size - duration) > 1e-6:
+            raise ValidationError(
+                f"duration ({duration}) must be an integer multiple "
+                f"of step_size ({self._step_size})"
+            )
+
+        def _generator() -> Iterator[StepResult]:
+            for _ in range(int(steps)):
+                yield self.step()
+
+        return _generator()
+
+    def run(self, duration: float) -> tuple[StepResult, ...]:
+        return tuple(self.run_iter(duration))
