@@ -11,6 +11,7 @@ from junction_sim.domain.validation import (
 from junction_sim.domain.vehicle import Vehicle
 from junction_sim.engine.arrival import ArrivalGenerator, DemandProfile
 from junction_sim.engine.clock import SimulationClock
+from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
 from junction_sim.exceptions import (
     ConfigurationError,
@@ -38,6 +39,7 @@ __all__ = [
     "InvalidStateError",
     "JunctionSimError",
     "Lane",
+    "LaneQueue",
     "Movement",
     "SignalPhase",
     "SignalPlan",
