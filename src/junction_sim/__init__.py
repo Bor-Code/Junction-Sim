@@ -4,6 +4,10 @@ from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
 from junction_sim.domain.signal import SignalPhase, SignalPlan
+from junction_sim.domain.validation import (
+    validate_signal_plan_against_intersection,
+    validate_vehicle_against_intersection,
+)
 from junction_sim.domain.vehicle import Vehicle
 from junction_sim.exceptions import (
     ConfigurationError,
@@ -37,4 +41,6 @@ __all__ = [
     "ValidationError",
     "Vehicle",
     "__version__",
+    "validate_signal_plan_against_intersection",
+    "validate_vehicle_against_intersection",
 ]
