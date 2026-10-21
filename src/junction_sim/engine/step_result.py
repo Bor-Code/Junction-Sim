@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
+from junction_sim.controllers.protocol import ControllerDecision
 from junction_sim.domain.vehicle import Vehicle
 from junction_sim.engine.transition import SignalState
 
@@ -14,3 +15,4 @@ class StepResult(BaseModel):
     arrived_vehicles: tuple[Vehicle, ...]
     discharged_vehicles: tuple[Vehicle, ...]
     queue_lengths: dict[str, int]
+    controller_decision: ControllerDecision | None = Field(default=None)
