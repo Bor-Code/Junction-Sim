@@ -9,6 +9,7 @@ from junction_sim.domain.validation import (
     validate_vehicle_against_intersection,
 )
 from junction_sim.domain.vehicle import Vehicle
+from junction_sim.engine.arrival import ArrivalGenerator, DemandProfile
 from junction_sim.engine.clock import SimulationClock
 from junction_sim.engine.rng import TrafficRNG
 from junction_sim.exceptions import (
@@ -26,8 +27,10 @@ __version__ = "0.1.0"
 
 __all__ = [
     "Approach",
+    "ArrivalGenerator",
     "ConfigurationError",
     "ControllerError",
+    "DemandProfile",
     "Direction",
     "Intersection",
     "InvalidGeometryError",
