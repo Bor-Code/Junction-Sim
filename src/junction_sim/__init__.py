@@ -1,3 +1,8 @@
+from junction_sim.controllers.protocol import (
+    ControllerContext,
+    ControllerDecision,
+    SignalController,
+)
 from junction_sim.domain.approach import Approach
 from junction_sim.domain.direction import Direction
 from junction_sim.domain.intersection import Intersection
@@ -33,6 +38,8 @@ __all__ = [
     "Approach",
     "ArrivalGenerator",
     "ConfigurationError",
+    "ControllerContext",
+    "ControllerDecision",
     "ControllerError",
     "DemandProfile",
     "Direction",
@@ -45,6 +52,7 @@ __all__ = [
     "LaneQueue",
     "Movement",
     "PhaseTracker",
+    "SignalController",
     "SignalPhase",
     "SignalPlan",
     "SignalState",
