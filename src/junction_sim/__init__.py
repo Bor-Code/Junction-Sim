@@ -13,6 +13,7 @@ from junction_sim.engine.arrival import ArrivalGenerator, DemandProfile
 from junction_sim.engine.clock import SimulationClock
 from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
+from junction_sim.engine.transition import PhaseTracker, SignalState
 from junction_sim.exceptions import (
     ConfigurationError,
     ControllerError,
@@ -41,8 +42,10 @@ __all__ = [
     "Lane",
     "LaneQueue",
     "Movement",
+    "PhaseTracker",
     "SignalPhase",
     "SignalPlan",
+    "SignalState",
     "SimulationClock",
     "SimulationError",
     "TrafficRNG",
