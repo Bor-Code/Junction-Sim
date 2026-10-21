@@ -9,6 +9,8 @@ from junction_sim.domain.validation import (
     validate_vehicle_against_intersection,
 )
 from junction_sim.domain.vehicle import Vehicle
+from junction_sim.engine.clock import SimulationClock
+from junction_sim.engine.rng import TrafficRNG
 from junction_sim.exceptions import (
     ConfigurationError,
     ControllerError,
@@ -36,7 +38,9 @@ __all__ = [
     "Movement",
     "SignalPhase",
     "SignalPlan",
+    "SimulationClock",
     "SimulationError",
+    "TrafficRNG",
     "TurnType",
     "ValidationError",
     "Vehicle",
