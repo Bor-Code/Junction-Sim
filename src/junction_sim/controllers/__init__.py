@@ -1,3 +1,4 @@
+from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.protocol import (
     ControllerContext,
     ControllerDecision,
@@ -7,5 +8,6 @@ from junction_sim.controllers.protocol import (
 __all__ = [
     "ControllerContext",
     "ControllerDecision",
+    "FixedTimeController",
     "SignalController",
 ]
