@@ -2,7 +2,7 @@ from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from junction_sim.engine.transition import SignalState
+from junction_sim.domain.signal import SignalState
 from junction_sim.exceptions import ValidationError
 
 

@@ -1,15 +1,9 @@
-from enum import StrEnum
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from junction_sim.domain.signal import SignalPhase
+from junction_sim.domain.signal import SignalPhase, SignalState
 from junction_sim.exceptions import InvalidStateError, ValidationError
 
-
-class SignalState(StrEnum):
-    GREEN = "green"
-    YELLOW = "yellow"
-    ALL_RED = "all_red"
+__all__ = ["PhaseTracker", "SignalState"]
 
 
 class PhaseTracker(BaseModel):
