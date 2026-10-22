@@ -1,3 +1,4 @@
+from junction_sim.controllers.actuated import ActuatedController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.protocol import (
     ControllerContext,
@@ -36,6 +37,7 @@ from junction_sim.exceptions import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "ActuatedController",
     "Approach",
     "ArrivalGenerator",
     "ConfigurationError",
