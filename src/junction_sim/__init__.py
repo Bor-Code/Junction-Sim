@@ -3,6 +3,13 @@ from junction_sim.benchmarks import (
     BenchmarkMetrics,
     BenchmarkResult,
 )
+from junction_sim.config import (
+    ScenarioConfig,
+    SimulationConfig,
+    load_scenario_from_dict,
+    load_scenario_from_file,
+    load_scenario_from_json,
+)
 from junction_sim.controllers.actuated import ActuatedController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
@@ -73,14 +80,19 @@ __all__ = [
     "JunctionSimError",
     "Lane",
     "LaneQueue",
+    "load_scenario_from_dict",
+    "load_scenario_from_file",
+    "load_scenario_from_json",
     "MaxPressureController",
     "Movement",
     "PhaseTracker",
+    "ScenarioConfig",
     "SignalController",
     "SignalPhase",
     "SignalPlan",
     "SignalState",
     "SimulationClock",
+    "SimulationConfig",
     "SimulationEngine",
     "SimulationError",
     "StepResult",
