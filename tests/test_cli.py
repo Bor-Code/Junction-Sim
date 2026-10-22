@@ -284,3 +284,19 @@ def test_cli_main_module_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(SystemExit) as exc_info:
         runpy.run_module("junction_sim.__main__", run_name="__main__")
     assert exc_info.value.code == 0
+
+
+def test_cli_run_with_dashboard(tmp_path: Path) -> None:
+    cfg_file = create_scenario_file(tmp_path / "scenario.json")
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
+    ret = main(
+        ["run", "-c", str(cfg_file), "--dashboard", "-d", "10.0"],
+        stdout=stdout,
+        stderr=stderr,
+    )
+    assert ret == 0
+    val = stdout.getvalue()
+    assert "QUEUE LENGTHS:" in val
+    assert "INTERSECTION LAYOUT:" in val
