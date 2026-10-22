@@ -1,4 +1,3 @@
-
 from junction_sim.controllers.actuated import ActuatedController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.domain.approach import Approach
