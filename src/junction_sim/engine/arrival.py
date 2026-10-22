@@ -7,17 +7,45 @@ from junction_sim.engine.rng import TrafficRNG
 from junction_sim.exceptions import InvalidGeometryError, ValidationError
 
 
+class DemandInterval(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    start_time: float = Field(ge=0.0)
+    end_time: float = Field(gt=0.0)
+    flow_rate_vph: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def validate_interval(self) -> "DemandInterval":
+        if self.end_time <= self.start_time:
+            raise ValidationError("end_time must be greater than start_time")
+        return self
+
+
 class DemandProfile(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     movement_id: str = Field(min_length=1)
-    flow_rate_vph: float = Field(ge=0.0)
+    flow_rate_vph: float = Field(default=0.0, ge=0.0)
+    intervals: tuple[DemandInterval, ...] = Field(default=())
 
     @model_validator(mode="after")
     def validate_demand(self) -> "DemandProfile":
         if not self.movement_id.strip():
             raise ValidationError("movement id cannot be empty or blank")
+        if self.intervals:
+            sorted_intervals = sorted(self.intervals, key=lambda x: x.start_time)
+            for i in range(len(sorted_intervals) - 1):
+                if sorted_intervals[i].end_time > sorted_intervals[i + 1].start_time:
+                    raise ValidationError("demand intervals cannot overlap")
         return self
+
+    def get_flow_rate(self, current_time: float) -> float:
+        if not self.intervals:
+            return self.flow_rate_vph
+        for interval in self.intervals:
+            if interval.start_time <= current_time < interval.end_time:
+                return interval.flow_rate_vph
+        return self.flow_rate_vph
 
 
 class ArrivalGenerator:
@@ -73,10 +101,11 @@ class ArrivalGenerator:
 
         new_vehicles: list[Vehicle] = []
         for demand in self._demands:
-            if demand.flow_rate_vph == 0.0:
+            rate = demand.get_flow_rate(current_time)
+            if rate == 0.0:
                 continue
 
-            lam = demand.flow_rate_vph * (step_size / 3600.0)
+            lam = rate * (step_size / 3600.0)
             count = self._rng.poisson(lam)
             movement = self._intersection.get_movement(demand.movement_id)
             candidate_lanes = self._lanes_per_movement[demand.movement_id]

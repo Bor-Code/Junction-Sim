@@ -5,6 +5,7 @@ from junction_sim.config.loader import (
 )
 from junction_sim.config.schema import (
     ApproachConfig,
+    DemandIntervalConfig,
     DemandProfileConfig,
     IntersectionConfig,
     LaneConfig,
@@ -17,6 +18,7 @@ from junction_sim.config.schema import (
 
 __all__ = [
     "ApproachConfig",
+    "DemandIntervalConfig",
     "DemandProfileConfig",
     "IntersectionConfig",
     "LaneConfig",

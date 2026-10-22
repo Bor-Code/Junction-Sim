@@ -29,7 +29,11 @@ from junction_sim.domain.validation import (
     validate_vehicle_against_intersection,
 )
 from junction_sim.domain.vehicle import Vehicle
-from junction_sim.engine.arrival import ArrivalGenerator, DemandProfile
+from junction_sim.engine.arrival import (
+    ArrivalGenerator,
+    DemandInterval,
+    DemandProfile,
+)
 from junction_sim.engine.clock import SimulationClock
 from junction_sim.engine.engine import SimulationEngine
 from junction_sim.engine.queue import LaneQueue
@@ -82,6 +86,7 @@ __all__ = [
     "ControllerContext",
     "ControllerDecision",
     "ControllerError",
+    "DemandInterval",
     "DemandProfile",
     "Direction",
     "export_benchmark_to_csv",

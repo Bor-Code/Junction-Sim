@@ -7,7 +7,7 @@ from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
 from junction_sim.domain.signal import SignalPhase, SignalPlan
 from junction_sim.domain.validation import validate_signal_plan_against_intersection
-from junction_sim.engine.arrival import DemandProfile
+from junction_sim.engine.arrival import DemandInterval, DemandProfile
 from junction_sim.exceptions import ConfigurationError
 
 
@@ -118,16 +118,33 @@ class SignalPlanConfig(BaseModel):
         )
 
 
+class DemandIntervalConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    start_time: float = Field(ge=0.0)
+    end_time: float = Field(gt=0.0)
+    flow_rate_vph: float = Field(ge=0.0)
+
+    def build_domain(self) -> DemandInterval:
+        return DemandInterval(
+            start_time=self.start_time,
+            end_time=self.end_time,
+            flow_rate_vph=self.flow_rate_vph,
+        )
+
+
 class DemandProfileConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     movement_id: str
-    flow_rate_vph: float = Field(ge=0.0)
+    flow_rate_vph: float = Field(default=0.0, ge=0.0)
+    intervals: list[DemandIntervalConfig] = Field(default_factory=list)
 
     def build_domain(self) -> DemandProfile:
         return DemandProfile(
             movement_id=self.movement_id,
             flow_rate_vph=self.flow_rate_vph,
+            intervals=tuple(i.build_domain() for i in self.intervals),
         )
 
 
