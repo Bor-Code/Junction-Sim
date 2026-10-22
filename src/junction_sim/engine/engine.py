@@ -1,5 +1,10 @@
 from collections.abc import Iterator
 
+from junction_sim.controllers.protocol import (
+    ControllerContext,
+    ControllerDecision,
+    SignalController,
+)
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.domain.validation import validate_signal_plan_against_intersection
@@ -19,16 +24,20 @@ class SimulationEngine:
         intersection: Intersection,
         signal_plan: SignalPlan,
         demands: tuple[DemandProfile, ...],
+        controller: SignalController | None = None,
         seed: int | None = None,
         step_size: float = 1.0,
     ) -> None:
         if step_size <= 0.0:
             raise ValidationError("step_size must be greater than zero")
+        if controller is not None and not isinstance(controller, SignalController):
+            raise ValidationError("controller must implement SignalController protocol")
 
         validate_signal_plan_against_intersection(signal_plan, intersection)
 
         self._intersection = intersection
         self._signal_plan = signal_plan
+        self._controller = controller
         self._step_size = step_size
         self._clock = SimulationClock(start_time=0.0, step_size=step_size)
         self._rng = TrafficRNG(seed=seed)
@@ -75,6 +84,10 @@ class SimulationEngine:
         return self._signal_plan
 
     @property
+    def controller(self) -> SignalController | None:
+        return self._controller
+
+    @property
     def queues(self) -> dict[str, LaneQueue]:
         return self._queues
 
@@ -114,10 +127,24 @@ class SimulationEngine:
             assert veh.target_lane_id is not None
             self._queues[veh.target_lane_id].enqueue(veh)
 
-        current_phase = self._signal_plan.get_phase(
-            self._phase_tracker.current_phase_id
-        )
-        self._phase_tracker = self._phase_tracker.step(self._step_size, current_phase)
+        decision: ControllerDecision | None = None
+        if self._controller is not None:
+            context = ControllerContext(
+                current_time=step_time,
+                active_phase_id=self._phase_tracker.current_phase_id,
+                signal_state=self._phase_tracker.state,
+                is_in_transition=self._phase_tracker.is_in_transition,
+                queue_lengths={
+                    lane_id: q.length for lane_id, q in self._queues.items()
+                },
+            )
+            decision = self._controller.decide(context)
+            if decision.should_change_phase:
+                assert decision.target_phase_id is not None
+                self.request_phase_change(decision.target_phase_id)
+
+        step_phase_id = self._phase_tracker.current_phase_id
+        step_signal_state = self._phase_tracker.state
 
         discharged_vehicles: list[Vehicle] = []
         if self._phase_tracker.can_discharge:
@@ -136,17 +163,22 @@ class SimulationEngine:
                     )
                     discharged_vehicles.extend(departed)
 
+        current_phase = self._signal_plan.get_phase(
+            self._phase_tracker.current_phase_id
+        )
+        self._phase_tracker = self._phase_tracker.step(self._step_size, current_phase)
         self._clock = self._clock.tick()
         queue_lengths = {lane_id: q.length for lane_id, q in self._queues.items()}
 
         return StepResult(
             time=step_time,
             step_index=step_index,
-            active_phase_id=self._phase_tracker.current_phase_id,
-            signal_state=self._phase_tracker.state,
+            active_phase_id=step_phase_id,
+            signal_state=step_signal_state,
             arrived_vehicles=arrived_vehicles,
             discharged_vehicles=tuple(discharged_vehicles),
             queue_lengths=queue_lengths,
+            controller_decision=decision,
         )
 
     def run_iter(self, duration: float) -> Iterator[StepResult]:

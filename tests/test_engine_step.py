@@ -193,7 +193,11 @@ def test_engine_request_phase_change_lifecycle() -> None:
 
     res_y2 = engine.step()
     assert res_y2.discharged_vehicles == ()
-    assert res_y2.signal_state == SignalState.ALL_RED
+    assert res_y2.signal_state == SignalState.YELLOW
+
+    res_r = engine.step()
+    assert res_r.discharged_vehicles == ()
+    assert res_r.signal_state == SignalState.ALL_RED
 
     res_green1 = engine.step()
     assert res_green1.signal_state == SignalState.GREEN

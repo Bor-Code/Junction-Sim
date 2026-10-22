@@ -1,6 +1,14 @@
+from enum import StrEnum
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from junction_sim.exceptions import InvalidSignalPlanError
+
+
+class SignalState(StrEnum):
+    GREEN = "green"
+    YELLOW = "yellow"
+    ALL_RED = "all_red"
 
 
 class SignalPhase(BaseModel):
