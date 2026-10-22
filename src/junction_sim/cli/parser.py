@@ -1,6 +1,7 @@
 import argparse
 
 from junction_sim import __version__
+from junction_sim.presets import list_presets
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -25,12 +26,19 @@ def create_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser(
         "run", help="Run a single-controller traffic simulation"
     )
-    run_parser.add_argument(
+    run_cfg_group = run_parser.add_mutually_exclusive_group(required=True)
+    run_cfg_group.add_argument(
         "--config",
         "-c",
-        required=True,
         type=str,
         help="Path to scenario JSON configuration file",
+    )
+    run_cfg_group.add_argument(
+        "--preset",
+        "-p",
+        type=str,
+        choices=list_presets(),
+        help="Name of built-in scenario preset to execute",
     )
     run_parser.add_argument(
         "--controller",
@@ -74,12 +82,19 @@ def create_parser() -> argparse.ArgumentParser:
         "benchmark",
         help="Run comparative benchmark across multiple signal controllers",
     )
-    bench_parser.add_argument(
+    bench_cfg_group = bench_parser.add_mutually_exclusive_group(required=True)
+    bench_cfg_group.add_argument(
         "--config",
         "-c",
-        required=True,
         type=str,
         help="Path to scenario JSON configuration file",
+    )
+    bench_cfg_group.add_argument(
+        "--preset",
+        "-p",
+        type=str,
+        choices=list_presets(),
+        help="Name of built-in scenario preset to benchmark",
     )
     bench_parser.add_argument(
         "--controllers",
@@ -115,6 +130,33 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Destination path to export benchmark summary JSON",
+    )
+
+    presets_parser = subparsers.add_parser(
+        "presets",
+        help="Inspect and export built-in scenario presets",
+    )
+    presets_subparsers = presets_parser.add_subparsers(
+        dest="preset_action",
+        help="Preset action",
+    )
+    presets_subparsers.add_parser("list", help="List all available scenario presets")
+    export_parser = presets_subparsers.add_parser(
+        "export", help="Export a scenario preset to JSON file"
+    )
+    export_parser.add_argument(
+        "--preset",
+        "-p",
+        required=True,
+        choices=list_presets(),
+        help="Name of scenario preset to export",
+    )
+    export_parser.add_argument(
+        "--out",
+        "-o",
+        required=True,
+        type=str,
+        help="Target JSON file path",
     )
 
     return parser
