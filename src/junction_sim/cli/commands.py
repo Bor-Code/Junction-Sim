@@ -17,10 +17,12 @@ from junction_sim.exceptions import ConfigurationError
 from junction_sim.presets import get_preset, list_presets_info
 from junction_sim.reporting.csv_reporter import (
     export_benchmark_to_csv,
+    export_multi_seed_benchmark_to_csv,
     export_step_results_to_csv,
 )
 from junction_sim.reporting.json_reporter import (
     export_benchmark_to_json,
+    export_multi_seed_benchmark_to_json,
     export_step_results_to_json,
 )
 from junction_sim.visualization import render_step_dashboard
@@ -127,6 +129,58 @@ def handle_benchmark(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> i
         step_size=sim_cfg.step_size,
         seed=seed,
     )
+
+    num_seeds: int | None = getattr(args, "num_seeds", None)
+    seeds_arg: str | None = getattr(args, "seeds", None)
+
+    if num_seeds is not None or seeds_arg is not None:
+        if seeds_arg is not None:
+            try:
+                seeds = [int(s.strip()) for s in seeds_arg.split(",") if s.strip()]
+            except ValueError as err:
+                raise ConfigurationError(
+                    f"invalid integer seed in seeds list: {seeds_arg}"
+                ) from err
+            if not seeds:
+                raise ConfigurationError("no valid seeds specified in --seeds")
+        else:
+            assert num_seeds is not None
+            if num_seeds <= 0:
+                raise ConfigurationError("num_seeds must be greater than zero")
+            base_seed = seed if seed is not None else 42
+            seeds = [base_seed + i for i in range(num_seeds)]
+
+        multi_result = harness.run_multi_seed_benchmark(
+            controllers=controllers, seeds=seeds, duration=duration
+        )
+
+        stdout.write(f"Multi-Seed Signal Controller Benchmark ({len(seeds)} runs)\n")
+        stdout.write(
+            f"{'Controller':<15} {'Runs':<6} {'Delay (s)':<18} {'95% CI (s)':<18} "
+            f"{'Discharges':<14} {'Compl %':<10}\n"
+        )
+        stdout.write("-" * 85 + "\n")
+        for ms_metric in multi_result.controller_metrics.values():
+            delay_str = f"{ms_metric.mean_delay:.2f} \u00b1 {ms_metric.std_delay:.2f}"
+            ci_str = f"[{ms_metric.ci95_delay_lower:.2f}, {ms_metric.ci95_delay_upper:.2f}]"
+            dis_str = f"{ms_metric.mean_discharges:.1f} \u00b1 {ms_metric.std_discharges:.1f}"
+            stdout.write(
+                f"{ms_metric.controller_name:<15} {ms_metric.runs:<6} {delay_str:<18} {ci_str:<18} "
+                f"{dis_str:<14} {ms_metric.mean_completion_rate:<10.2f}\n"
+            )
+        stdout.write("-" * 85 + "\n")
+        stdout.write(f"Best by Delay:      {multi_result.best_by_delay}\n")
+        stdout.write(f"Best by Throughput: {multi_result.best_by_throughput}\n")
+
+        if args.out_csv:
+            export_multi_seed_benchmark_to_csv(multi_result, destination=args.out_csv)
+            stdout.write(f"Exported CSV:       {args.out_csv}\n")
+
+        if args.out_json:
+            export_multi_seed_benchmark_to_json(multi_result, destination=args.out_json)
+            stdout.write(f"Exported JSON:      {args.out_json}\n")
+
+        return 0
 
     benchmark_result = harness.run_benchmark(controllers=controllers, duration=duration)
 

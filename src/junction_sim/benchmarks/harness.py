@@ -1,4 +1,11 @@
+from collections.abc import Sequence
+
 from junction_sim.benchmarks.metrics import BenchmarkMetrics, BenchmarkResult
+from junction_sim.benchmarks.multi_seed import (
+    MultiSeedBenchmarkResult,
+    MultiSeedMetrics,
+    aggregate_seed_metrics,
+)
 from junction_sim.controllers.protocol import SignalController
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
@@ -59,7 +66,11 @@ class BenchmarkHarness:
         return self._seed
 
     def evaluate_controller(
-        self, controller: SignalController, name: str, duration: float
+        self,
+        controller: SignalController,
+        name: str,
+        duration: float,
+        seed: int | None = None,
     ) -> BenchmarkMetrics:
         if duration <= 0.0:
             raise ValidationError("duration must be greater than zero")
@@ -69,13 +80,14 @@ class BenchmarkHarness:
             )
 
         controller.reset()
+        target_seed = seed if seed is not None else self._seed
         engine = SimulationEngine(
             intersection=self._intersection,
             signal_plan=self._signal_plan,
             demands=self._demands,
             controller=controller,
             step_size=self._step_size,
-            seed=self._seed,
+            seed=target_seed,
         )
 
         results = engine.run(duration)
@@ -146,4 +158,43 @@ class BenchmarkHarness:
             duration=duration,
             step_size=self._step_size,
             seed=self._seed,
+        )
+
+    def evaluate_controller_multi_seed(
+        self,
+        controller: SignalController,
+        name: str,
+        seeds: Sequence[int],
+        duration: float,
+    ) -> MultiSeedMetrics:
+        if not seeds:
+            raise ValidationError("seeds sequence cannot be empty")
+
+        runs_metrics = [
+            self.evaluate_controller(controller, name, duration, seed=s) for s in seeds
+        ]
+        return aggregate_seed_metrics(name, runs_metrics)
+
+    def run_multi_seed_benchmark(
+        self,
+        controllers: dict[str, SignalController],
+        seeds: Sequence[int],
+        duration: float,
+    ) -> MultiSeedBenchmarkResult:
+        if not controllers:
+            raise ValidationError("controllers mapping cannot be empty")
+        if not seeds:
+            raise ValidationError("seeds sequence cannot be empty")
+
+        metrics: dict[str, MultiSeedMetrics] = {}
+        for name, controller in controllers.items():
+            metrics[name] = self.evaluate_controller_multi_seed(
+                controller, name, seeds, duration
+            )
+
+        return MultiSeedBenchmarkResult(
+            controller_metrics=metrics,
+            seeds=tuple(seeds),
+            duration=duration,
+            step_size=self._step_size,
         )

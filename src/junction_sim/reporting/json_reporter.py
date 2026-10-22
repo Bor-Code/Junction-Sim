@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TextIO
 
-from junction_sim.benchmarks.metrics import BenchmarkResult
+from junction_sim.benchmarks import BenchmarkResult, MultiSeedBenchmarkResult
 from junction_sim.engine.step_result import StepResult
 
 
@@ -73,6 +73,26 @@ def export_benchmark_to_json(
     }
 
     json_str = json.dumps(payload, indent=indent)
+
+    if destination is None:
+        return json_str
+
+    if isinstance(destination, (str, Path)):
+        path = Path(destination)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json_str, encoding="utf-8")
+        return json_str
+
+    destination.write(json_str)
+    return ""
+
+
+def export_multi_seed_benchmark_to_json(
+    result: MultiSeedBenchmarkResult,
+    destination: Path | str | TextIO | None = None,
+    indent: int = 2,
+) -> str:
+    json_str = result.model_dump_json(indent=indent)
 
     if destination is None:
         return json_str
