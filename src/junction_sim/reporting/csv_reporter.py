@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TextIO
 
-from junction_sim.benchmarks.metrics import BenchmarkResult
+from junction_sim.benchmarks import BenchmarkResult, MultiSeedBenchmarkResult
 from junction_sim.engine.step_result import StepResult
 
 
@@ -101,6 +101,64 @@ def export_benchmark_to_csv(
                 "max_queue_veh": m.max_queue,
                 "phase_switch_count": m.phase_switch_count,
                 "wasted_green_time_s": f"{m.wasted_green_time:.3f}",
+            }
+        )
+
+    if destination is None:
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+        return buf.getvalue()
+
+    if isinstance(destination, (str, Path)):
+        path = Path(destination)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(rows)
+        return path.read_text(encoding="utf-8")
+
+    writer = csv.DictWriter(destination, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    return ""
+
+
+def export_multi_seed_benchmark_to_csv(
+    result: MultiSeedBenchmarkResult,
+    destination: Path | str | TextIO | None = None,
+) -> str:
+    fieldnames = [
+        "controller",
+        "runs",
+        "mean_delay_s",
+        "std_delay_s",
+        "ci95_lower_s",
+        "ci95_upper_s",
+        "mean_discharges",
+        "std_discharges",
+        "mean_completion_rate_pct",
+        "mean_max_queue_veh",
+        "mean_wasted_green_s",
+    ]
+
+    rows: list[dict[str, object]] = []
+    for m in result.controller_metrics.values():
+        rows.append(
+            {
+                "controller": m.controller_name,
+                "runs": m.runs,
+                "mean_delay_s": f"{m.mean_delay:.3f}",
+                "std_delay_s": f"{m.std_delay:.3f}",
+                "ci95_lower_s": f"{m.ci95_delay_lower:.3f}",
+                "ci95_upper_s": f"{m.ci95_delay_upper:.3f}",
+                "mean_discharges": f"{m.mean_discharges:.2f}",
+                "std_discharges": f"{m.std_discharges:.2f}",
+                "mean_completion_rate_pct": f"{m.mean_completion_rate:.2f}",
+                "mean_max_queue_veh": f"{m.mean_max_queue:.2f}",
+                "mean_wasted_green_s": f"{m.mean_wasted_green:.3f}",
             }
         )
 

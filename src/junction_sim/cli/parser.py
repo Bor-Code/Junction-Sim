@@ -120,6 +120,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Override random number generator seed",
     )
     bench_parser.add_argument(
+        "--num-seeds",
+        type=int,
+        default=None,
+        help="Execute multi-seed evaluation across N consecutive seeds",
+    )
+    bench_parser.add_argument(
+        "--seeds",
+        type=str,
+        default=None,
+        help="Comma-separated list of RNG seeds for multi-seed evaluation",
+    )
+    bench_parser.add_argument(
         "--out-csv",
         type=str,
         default=None,

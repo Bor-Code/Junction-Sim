@@ -2,6 +2,8 @@ from junction_sim.benchmarks import (
     BenchmarkHarness,
     BenchmarkMetrics,
     BenchmarkResult,
+    MultiSeedBenchmarkResult,
+    MultiSeedMetrics,
 )
 from junction_sim.config import (
     ScenarioConfig,
@@ -64,6 +66,8 @@ from junction_sim.presets import (
 from junction_sim.reporting import (
     export_benchmark_to_csv,
     export_benchmark_to_json,
+    export_multi_seed_benchmark_to_csv,
+    export_multi_seed_benchmark_to_json,
     export_step_results_to_csv,
     export_step_results_to_json,
 )
@@ -92,6 +96,8 @@ __all__ = [
     "Direction",
     "export_benchmark_to_csv",
     "export_benchmark_to_json",
+    "export_multi_seed_benchmark_to_csv",
+    "export_multi_seed_benchmark_to_json",
     "export_step_results_to_csv",
     "export_step_results_to_json",
     "FixedTimeController",
@@ -108,6 +114,8 @@ __all__ = [
     "load_scenario_from_json",
     "MaxPressureController",
     "Movement",
+    "MultiSeedBenchmarkResult",
+    "MultiSeedMetrics",
     "PhaseTracker",
     "PresetInfo",
     "build_arterial_corridor_preset",
