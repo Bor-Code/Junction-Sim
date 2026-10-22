@@ -11,6 +11,7 @@ def validate_signal_plan_against_intersection(
     intersection: Intersection,
 ) -> None:
     intersection_movement_ids = {m.id for m in intersection.movements}
+    intersection_crosswalk_ids = {cw.id for cw in intersection.crosswalks}
     all_green_movement_ids: set[str] = set()
 
     for phase in plan.phases:
@@ -20,6 +21,12 @@ def validate_signal_plan_against_intersection(
                     f"phase '{phase.id}' references unknown movement '{m_id}'"
                 )
             all_green_movement_ids.add(m_id)
+
+        for cw_id in phase.pedestrian_crosswalk_ids:
+            if cw_id not in intersection_crosswalk_ids:
+                raise InvalidSignalPlanError(
+                    f"phase '{phase.id}' references unknown crosswalk '{cw_id}'"
+                )
 
         for m1, m2 in combinations(phase.green_movement_ids, 2):
             if intersection.are_conflicting(m1, m2):

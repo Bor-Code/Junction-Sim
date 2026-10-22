@@ -5,12 +5,20 @@ from junction_sim.controllers.protocol import (
     ControllerDecision,
     SignalController,
 )
+from junction_sim.domain.crosswalk import PedestrianSignalState
 from junction_sim.domain.intersection import Intersection
+from junction_sim.domain.pedestrian import Pedestrian
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.domain.validation import validate_signal_plan_against_intersection
 from junction_sim.domain.vehicle import Vehicle
-from junction_sim.engine.arrival import ArrivalGenerator, DemandProfile
+from junction_sim.engine.arrival import (
+    ArrivalGenerator,
+    DemandProfile,
+    PedestrianArrivalGenerator,
+    PedestrianDemandProfile,
+)
 from junction_sim.engine.clock import SimulationClock
+from junction_sim.engine.pedestrian_queue import PedestrianQueue
 from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
 from junction_sim.engine.step_result import StepResult
@@ -24,6 +32,7 @@ class SimulationEngine:
         intersection: Intersection,
         signal_plan: SignalPlan,
         demands: tuple[DemandProfile, ...],
+        pedestrian_demands: tuple[PedestrianDemandProfile, ...] = (),
         controller: SignalController | None = None,
         seed: int | None = None,
         step_size: float = 1.0,
@@ -46,11 +55,21 @@ class SimulationEngine:
             demands=demands,
             rng=self._rng.spawn_child(),
         )
+        self._pedestrian_demands = pedestrian_demands
+        self._pedestrian_arrival_generator = PedestrianArrivalGenerator(
+            intersection=intersection,
+            demands=pedestrian_demands,
+            rng=self._rng.spawn_child(),
+        )
 
         self._queues: dict[str, LaneQueue] = {}
         for app in intersection.approaches:
             for lane in app.lanes:
                 self._queues[lane.id] = LaneQueue(lane=lane)
+
+        self._pedestrian_queues: dict[str, PedestrianQueue] = {}
+        for cw in intersection.crosswalks:
+            self._pedestrian_queues[cw.id] = PedestrianQueue(crosswalk=cw)
 
         initial_phase = signal_plan.phases[0]
         self._phase_tracker = PhaseTracker(current_phase_id=initial_phase.id)
@@ -91,6 +110,22 @@ class SimulationEngine:
     def queues(self) -> dict[str, LaneQueue]:
         return self._queues
 
+    @property
+    def pedestrian_demands(self) -> tuple[PedestrianDemandProfile, ...]:
+        return self._pedestrian_demands
+
+    @property
+    def pedestrian_queues(self) -> dict[str, PedestrianQueue]:
+        return self._pedestrian_queues
+
+    def get_pedestrian_queue(self, crosswalk_id: str) -> PedestrianQueue:
+        if crosswalk_id not in self._pedestrian_queues:
+            raise InvalidGeometryError(f"unknown crosswalk id '{crosswalk_id}'")
+        return self._pedestrian_queues[crosswalk_id]
+
+    def get_pedestrian_queue_length(self, crosswalk_id: str) -> int:
+        return self.get_pedestrian_queue(crosswalk_id).length
+
     def get_queue(self, lane_id: str) -> LaneQueue:
         if lane_id not in self._queues:
             raise InvalidGeometryError(f"unknown lane id '{lane_id}'")
@@ -126,6 +161,12 @@ class SimulationEngine:
         for veh in arrived_vehicles:
             assert veh.target_lane_id is not None
             self._queues[veh.target_lane_id].enqueue(veh)
+
+        arrived_pedestrians = self._pedestrian_arrival_generator.generate_arrivals(
+            current_time=step_time, step_size=self._step_size
+        )
+        for ped in arrived_pedestrians:
+            self._pedestrian_queues[ped.crosswalk_id].enqueue(ped)
 
         decision: ControllerDecision | None = None
         if self._controller is not None:
@@ -163,12 +204,39 @@ class SimulationEngine:
                     )
                     discharged_vehicles.extend(departed)
 
+        active_phase_obj = self._signal_plan.get_phase(
+            self._phase_tracker.current_phase_id
+        )
+        is_green = self._phase_tracker.can_discharge
+        elapsed_green = self._phase_tracker.elapsed_in_state
+
+        pedestrian_signals: dict[str, PedestrianSignalState] = {}
+        discharged_pedestrians: list[Pedestrian] = []
+        for cw in self._intersection.crosswalks:
+            if cw.id in active_phase_obj.pedestrian_crosswalk_ids:
+                p_state = cw.get_signal_state(
+                    elapsed_in_phase=elapsed_green,
+                    is_phase_green=is_green,
+                )
+            else:
+                p_state = PedestrianSignalState.DONT_WALK
+            pedestrian_signals[cw.id] = p_state
+
+            if p_state == PedestrianSignalState.WALK:
+                released = self._pedestrian_queues[cw.id].discharge(
+                    current_time=step_time
+                )
+                discharged_pedestrians.extend(released)
+
         current_phase = self._signal_plan.get_phase(
             self._phase_tracker.current_phase_id
         )
         self._phase_tracker = self._phase_tracker.step(self._step_size, current_phase)
         self._clock = self._clock.tick()
         queue_lengths = {lane_id: q.length for lane_id, q in self._queues.items()}
+        ped_queue_lengths = {
+            cw_id: q.length for cw_id, q in self._pedestrian_queues.items()
+        }
 
         return StepResult(
             time=step_time,
@@ -179,6 +247,10 @@ class SimulationEngine:
             discharged_vehicles=tuple(discharged_vehicles),
             queue_lengths=queue_lengths,
             controller_decision=decision,
+            arrived_pedestrians=arrived_pedestrians,
+            discharged_pedestrians=tuple(discharged_pedestrians),
+            pedestrian_queue_lengths=ped_queue_lengths,
+            pedestrian_signals=pedestrian_signals,
         )
 
     def run_iter(self, duration: float) -> Iterator[StepResult]:

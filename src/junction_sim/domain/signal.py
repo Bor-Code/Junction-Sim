@@ -16,6 +16,7 @@ class SignalPhase(BaseModel):
 
     id: str = Field(min_length=1)
     green_movement_ids: tuple[str, ...]
+    pedestrian_crosswalk_ids: tuple[str, ...] = Field(default_factory=tuple)
     green_duration: float = Field(gt=0.0)
     yellow_duration: float = Field(default=3.0, ge=0.0)
     all_red_duration: float = Field(default=2.0, ge=0.0)
@@ -38,6 +39,15 @@ class SignalPhase(BaseModel):
 
         if len(self.green_movement_ids) != len(set(self.green_movement_ids)):
             raise InvalidSignalPlanError("duplicate movement ids found in phase")
+
+        for cw_id in self.pedestrian_crosswalk_ids:
+            if not cw_id.strip():
+                raise InvalidSignalPlanError("crosswalk id cannot be empty or blank")
+
+        if len(self.pedestrian_crosswalk_ids) != len(
+            set(self.pedestrian_crosswalk_ids)
+        ):
+            raise InvalidSignalPlanError("duplicate crosswalk ids found in phase")
 
         if self.max_green < self.min_green:
             raise InvalidSignalPlanError("max_green cannot be less than min_green")

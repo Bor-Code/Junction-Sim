@@ -1,13 +1,18 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from junction_sim.domain.approach import Approach
+from junction_sim.domain.crosswalk import Crosswalk
 from junction_sim.domain.direction import Direction
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
 from junction_sim.domain.signal import SignalPhase, SignalPlan
 from junction_sim.domain.validation import validate_signal_plan_against_intersection
-from junction_sim.engine.arrival import DemandInterval, DemandProfile
+from junction_sim.engine.arrival import (
+    DemandInterval,
+    DemandProfile,
+    PedestrianDemandProfile,
+)
 from junction_sim.exceptions import ConfigurationError
 
 
@@ -25,6 +30,27 @@ class LaneConfig(BaseModel):
             approach_id=self.approach_id,
             allowed_movement_ids=tuple(self.allowed_movement_ids),
             max_capacity=self.max_capacity,
+        )
+
+
+class CrosswalkConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    approach_id: str
+    length_meters: float = Field(default=12.0, gt=0.0)
+    pedestrian_speed_mps: float = Field(default=1.2, gt=0.0)
+    walk_duration: float = Field(default=7.0, ge=4.0)
+    clearance_duration: float | None = Field(default=None, ge=0.0)
+
+    def build_domain(self) -> Crosswalk:
+        return Crosswalk(
+            id=self.id,
+            approach_id=self.approach_id,
+            length_meters=self.length_meters,
+            pedestrian_speed_mps=self.pedestrian_speed_mps,
+            walk_duration=self.walk_duration,
+            clearance_duration=self.clearance_duration,
         )
 
 
@@ -68,6 +94,7 @@ class IntersectionConfig(BaseModel):
     id: str
     approaches: list[ApproachConfig] = Field(min_length=1)
     movements: list[MovementConfig] = Field(min_length=1)
+    crosswalks: list[CrosswalkConfig] = Field(default_factory=list)
     conflicting_movement_pairs: list[list[str]] = Field(default_factory=list)
 
     def build_domain(self) -> Intersection:
@@ -78,6 +105,7 @@ class IntersectionConfig(BaseModel):
             id=self.id,
             approaches=tuple(a.build_domain() for a in self.approaches),
             movements=tuple(m.build_domain() for m in self.movements),
+            crosswalks=tuple(cw.build_domain() for cw in self.crosswalks),
             conflicting_movement_pairs=conflicts,
         )
 
@@ -87,6 +115,7 @@ class SignalPhaseConfig(BaseModel):
 
     id: str
     green_movement_ids: list[str] = Field(min_length=1)
+    pedestrian_crosswalk_ids: list[str] = Field(default_factory=list)
     green_duration: float = Field(gt=0.0)
     yellow_duration: float = Field(default=3.0, ge=0.0)
     all_red_duration: float = Field(default=1.0, ge=0.0)
@@ -97,6 +126,7 @@ class SignalPhaseConfig(BaseModel):
         return SignalPhase(
             id=self.id,
             green_movement_ids=tuple(self.green_movement_ids),
+            pedestrian_crosswalk_ids=tuple(self.pedestrian_crosswalk_ids),
             green_duration=self.green_duration,
             yellow_duration=self.yellow_duration,
             all_red_duration=self.all_red_duration,
@@ -148,6 +178,21 @@ class DemandProfileConfig(BaseModel):
         )
 
 
+class PedestrianDemandConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    crosswalk_id: str
+    flow_rate_pph: float = Field(default=0.0, ge=0.0)
+    intervals: list[DemandIntervalConfig] = Field(default_factory=list)
+
+    def build_domain(self) -> PedestrianDemandProfile:
+        return PedestrianDemandProfile(
+            crosswalk_id=self.crosswalk_id,
+            flow_rate_pph=self.flow_rate_pph,
+            intervals=tuple(i.build_domain() for i in self.intervals),
+        )
+
+
 class SimulationConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -162,7 +207,11 @@ class ScenarioConfig(BaseModel):
     intersection: IntersectionConfig
     signal_plan: SignalPlanConfig
     demands: list[DemandProfileConfig]
+    pedestrian_demands: list[PedestrianDemandConfig] = Field(default_factory=list)
     simulation: SimulationConfig = Field(default_factory=SimulationConfig)
+
+    def build_pedestrian_demands(self) -> tuple[PedestrianDemandProfile, ...]:
+        return tuple(pd.build_domain() for pd in self.pedestrian_demands)
 
     def build_scenario(
         self,
@@ -181,6 +230,14 @@ class ScenarioConfig(BaseModel):
             if d.movement_id not in movement_ids:
                 raise ConfigurationError(
                     f"demand references unknown movement '{d.movement_id}'"
+                )
+
+        crosswalk_ids = {cw.id for cw in inter.crosswalks}
+        for pd in self.pedestrian_demands:
+            if pd.crosswalk_id not in crosswalk_ids:
+                raise ConfigurationError(
+                    f"pedestrian demand references unknown crosswalk "
+                    f"'{pd.crosswalk_id}'"
                 )
 
         return inter, plan, demands, self.simulation

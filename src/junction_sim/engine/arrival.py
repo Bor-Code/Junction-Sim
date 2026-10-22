@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
+from junction_sim.domain.pedestrian import Pedestrian
 from junction_sim.domain.vehicle import Vehicle
 from junction_sim.engine.rng import TrafficRNG
 from junction_sim.exceptions import InvalidGeometryError, ValidationError
@@ -128,3 +129,93 @@ class ArrivalGenerator:
                 new_vehicles.append(vehicle)
 
         return tuple(new_vehicles)
+
+
+class PedestrianDemandProfile(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    crosswalk_id: str = Field(min_length=1)
+    flow_rate_pph: float = Field(default=0.0, ge=0.0)
+    intervals: tuple[DemandInterval, ...] = Field(default=())
+
+    @model_validator(mode="after")
+    def validate_demand(self) -> "PedestrianDemandProfile":
+        if not self.crosswalk_id.strip():
+            raise ValidationError("crosswalk id cannot be empty or blank")
+        if self.intervals:
+            sorted_intervals = sorted(self.intervals, key=lambda x: x.start_time)
+            for i in range(len(sorted_intervals) - 1):
+                if sorted_intervals[i].end_time > sorted_intervals[i + 1].start_time:
+                    raise ValidationError("demand intervals cannot overlap")
+        return self
+
+    def get_flow_rate(self, current_time: float) -> float:
+        if not self.intervals:
+            return self.flow_rate_pph
+        for interval in self.intervals:
+            if interval.start_time <= current_time < interval.end_time:
+                return interval.flow_rate_vph
+        return self.flow_rate_pph
+
+
+class PedestrianArrivalGenerator:
+    def __init__(
+        self,
+        intersection: Intersection,
+        demands: tuple[PedestrianDemandProfile, ...],
+        rng: TrafficRNG,
+    ) -> None:
+        self._intersection = intersection
+        self._rng = rng
+        self._pedestrian_counter = 0
+
+        demand_crosswalk_ids = [d.crosswalk_id for d in demands]
+        if len(demand_crosswalk_ids) != len(set(demand_crosswalk_ids)):
+            raise ValidationError("duplicate demand profiles found for crosswalk")
+
+        intersection_crosswalk_ids = {cw.id for cw in intersection.crosswalks}
+        for d in demands:
+            if d.crosswalk_id not in intersection_crosswalk_ids:
+                raise InvalidGeometryError(
+                    f"unknown crosswalk id '{d.crosswalk_id}' "
+                    "in pedestrian demand profile"
+                )
+
+        self._demands = demands
+
+    @property
+    def demands(self) -> tuple[PedestrianDemandProfile, ...]:
+        return self._demands
+
+    @property
+    def pedestrian_counter(self) -> int:
+        return self._pedestrian_counter
+
+    def generate_arrivals(
+        self, current_time: float, step_size: float
+    ) -> tuple[Pedestrian, ...]:
+        if step_size <= 0.0:
+            raise ValidationError("step_size must be greater than zero")
+        if current_time < 0.0:
+            raise ValidationError("current_time cannot be negative")
+
+        new_pedestrians: list[Pedestrian] = []
+        for demand in self._demands:
+            rate = demand.get_flow_rate(current_time)
+            if rate == 0.0:
+                continue
+
+            lam = rate * (step_size / 3600.0)
+            count = self._rng.poisson(lam)
+
+            for _ in range(count):
+                self._pedestrian_counter += 1
+                ped_id = f"ped_{demand.crosswalk_id}_{self._pedestrian_counter}"
+                pedestrian = Pedestrian(
+                    id=ped_id,
+                    crosswalk_id=demand.crosswalk_id,
+                    arrival_time=current_time,
+                )
+                new_pedestrians.append(pedestrian)
+
+        return tuple(new_pedestrians)

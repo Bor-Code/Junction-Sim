@@ -59,11 +59,13 @@ def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
 
     intersection, signal_plan, demands, sim_cfg = scenario.build_scenario()
     controller = instantiate_controller(args.controller, signal_plan, intersection)
+    ped_demands = scenario.build_pedestrian_demands()
 
     engine = SimulationEngine(
         intersection=intersection,
         signal_plan=signal_plan,
         demands=demands,
+        pedestrian_demands=ped_demands,
         controller=controller,
         step_size=sim_cfg.step_size,
         seed=seed,
@@ -90,6 +92,12 @@ def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     stdout.write(f"Max Delay:       {max_delay:.3f} s\n")
     stdout.write(f"Average Queue:   {avg_queue:.3f} veh\n")
     stdout.write(f"Max Queue:       {max_queue} veh\n")
+
+    if intersection.crosswalks:
+        ped_arrivals = sum(len(r.arrived_pedestrians) for r in results)
+        ped_served = sum(len(r.discharged_pedestrians) for r in results)
+        stdout.write(f"Ped Arrivals:    {ped_arrivals}\n")
+        stdout.write(f"Ped Served:      {ped_served}\n")
 
     if args.out_csv:
         export_step_results_to_csv(results, destination=args.out_csv)
@@ -162,10 +170,15 @@ def handle_benchmark(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> i
         stdout.write("-" * 85 + "\n")
         for ms_metric in multi_result.controller_metrics.values():
             delay_str = f"{ms_metric.mean_delay:.2f} \u00b1 {ms_metric.std_delay:.2f}"
-            ci_str = f"[{ms_metric.ci95_delay_lower:.2f}, {ms_metric.ci95_delay_upper:.2f}]"
-            dis_str = f"{ms_metric.mean_discharges:.1f} \u00b1 {ms_metric.std_discharges:.1f}"
+            ci_str = (
+                f"[{ms_metric.ci95_delay_lower:.2f}, {ms_metric.ci95_delay_upper:.2f}]"
+            )
+            dis_str = (
+                f"{ms_metric.mean_discharges:.1f} \u00b1 {ms_metric.std_discharges:.1f}"
+            )
             stdout.write(
-                f"{ms_metric.controller_name:<15} {ms_metric.runs:<6} {delay_str:<18} {ci_str:<18} "
+                f"{ms_metric.controller_name:<15} {ms_metric.runs:<6} "
+                f"{delay_str:<18} {ci_str:<18} "
                 f"{dis_str:<14} {ms_metric.mean_completion_rate:<10.2f}\n"
             )
         stdout.write("-" * 85 + "\n")
