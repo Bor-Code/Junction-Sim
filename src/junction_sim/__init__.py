@@ -67,6 +67,7 @@ from junction_sim.reporting import (
     export_step_results_to_csv,
     export_step_results_to_json,
 )
+from junction_sim.rl import JunctionEnv, RLController
 from junction_sim.visualization import (
     render_ascii_intersection,
     render_queue_bars,
@@ -98,6 +99,7 @@ __all__ = [
     "InvalidGeometryError",
     "InvalidSignalPlanError",
     "InvalidStateError",
+    "JunctionEnv",
     "JunctionSimError",
     "Lane",
     "LaneQueue",
@@ -116,6 +118,7 @@ __all__ = [
     "get_preset_info",
     "list_presets",
     "list_presets_info",
+    "RLController",
     "render_ascii_intersection",
     "render_queue_bars",
     "render_step_dashboard",
