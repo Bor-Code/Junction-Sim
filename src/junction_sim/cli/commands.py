@@ -20,6 +20,7 @@ from junction_sim.reporting.json_reporter import (
     export_benchmark_to_json,
     export_step_results_to_json,
 )
+from junction_sim.visualization import render_step_dashboard
 
 
 def instantiate_controller(
@@ -85,6 +86,9 @@ def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     if args.out_json:
         export_step_results_to_json(results, destination=args.out_json)
         stdout.write(f"Exported JSON:   {args.out_json}\n")
+
+    if getattr(args, "dashboard", False):
+        stdout.write("\n" + render_step_dashboard(results[-1], plan=signal_plan) + "\n")
 
     return 0
 

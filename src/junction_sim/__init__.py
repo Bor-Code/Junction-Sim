@@ -52,6 +52,11 @@ from junction_sim.reporting import (
     export_step_results_to_csv,
     export_step_results_to_json,
 )
+from junction_sim.visualization import (
+    render_ascii_intersection,
+    render_queue_bars,
+    render_step_dashboard,
+)
 
 __version__ = "0.1.0"
 
@@ -86,6 +91,9 @@ __all__ = [
     "MaxPressureController",
     "Movement",
     "PhaseTracker",
+    "render_ascii_intersection",
+    "render_queue_bars",
+    "render_step_dashboard",
     "ScenarioConfig",
     "SignalController",
     "SignalPhase",

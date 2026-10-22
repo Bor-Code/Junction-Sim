@@ -64,6 +64,11 @@ def create_parser() -> argparse.ArgumentParser:
         default=None,
         help="Destination path to export detailed JSON results",
     )
+    run_parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Render terminal ASCII dashboard for the final simulation step",
+    )
 
     bench_parser = subparsers.add_parser(
         "benchmark",
