@@ -39,6 +39,12 @@ from junction_sim.exceptions import (
     SimulationError,
     ValidationError,
 )
+from junction_sim.reporting import (
+    export_benchmark_to_csv,
+    export_benchmark_to_json,
+    export_step_results_to_csv,
+    export_step_results_to_json,
+)
 
 __version__ = "0.1.0"
 
@@ -55,6 +61,10 @@ __all__ = [
     "ControllerError",
     "DemandProfile",
     "Direction",
+    "export_benchmark_to_csv",
+    "export_benchmark_to_json",
+    "export_step_results_to_csv",
+    "export_step_results_to_json",
     "FixedTimeController",
     "Intersection",
     "InvalidGeometryError",
