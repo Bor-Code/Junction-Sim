@@ -1,9 +1,11 @@
 import argparse
 import sys
+from pathlib import Path
 from typing import TextIO
 
 from junction_sim.benchmarks.harness import BenchmarkHarness
 from junction_sim.config.loader import load_scenario_from_file
+from junction_sim.config.schema import ScenarioConfig
 from junction_sim.controllers.actuated import ActuatedController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
@@ -12,6 +14,7 @@ from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.engine.engine import SimulationEngine
 from junction_sim.exceptions import ConfigurationError
+from junction_sim.presets import get_preset, list_presets_info
 from junction_sim.reporting.csv_reporter import (
     export_benchmark_to_csv,
     export_step_results_to_csv,
@@ -38,8 +41,15 @@ def instantiate_controller(
     )
 
 
+def load_scenario_from_args(args: argparse.Namespace) -> ScenarioConfig:
+    preset_name = getattr(args, "preset", None)
+    if preset_name is not None:
+        return get_preset(preset_name)
+    return load_scenario_from_file(args.config)
+
+
 def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
-    scenario = load_scenario_from_file(args.config)
+    scenario = load_scenario_from_args(args)
     duration = (
         args.duration if args.duration is not None else scenario.simulation.duration
     )
@@ -94,7 +104,7 @@ def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
 
 
 def handle_benchmark(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
-    scenario = load_scenario_from_file(args.config)
+    scenario = load_scenario_from_args(args)
     duration = (
         args.duration if args.duration is not None else scenario.simulation.duration
     )
@@ -144,4 +154,22 @@ def handle_benchmark(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> i
         export_benchmark_to_json(benchmark_result, destination=args.out_json)
         stdout.write(f"Exported JSON:      {args.out_json}\n")
 
+    return 0
+
+
+def handle_presets(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
+    action = getattr(args, "preset_action", None)
+    if action == "export":
+        cfg = get_preset(args.preset)
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(cfg.model_dump_json(indent=2), encoding="utf-8")
+        stdout.write(f"Exported preset '{args.preset}' to {out_path}\n")
+        return 0
+
+    stdout.write("Available Scenario Presets\n")
+    stdout.write(f"{'Preset Name':<24} {'Description'}\n")
+    stdout.write("-" * 76 + "\n")
+    for info in list_presets_info():
+        stdout.write(f"{info.name:<24} {info.description}\n")
     return 0

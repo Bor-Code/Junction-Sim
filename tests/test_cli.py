@@ -300,3 +300,73 @@ def test_cli_run_with_dashboard(tmp_path: Path) -> None:
     val = stdout.getvalue()
     assert "QUEUE LENGTHS:" in val
     assert "INTERSECTION LAYOUT:" in val
+
+
+def test_cli_run_with_preset() -> None:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    ret = main(
+        ["run", "-p", "webster_four_way", "-d", "5.0"],
+        stdout=stdout,
+        stderr=stderr,
+    )
+    assert ret == 0
+    val = stdout.getvalue()
+    assert "Simulation Execution Summary" in val
+    assert "Controller:      fixed-time" in val
+
+
+def test_cli_benchmark_with_preset() -> None:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    ret = main(
+        [
+            "benchmark",
+            "-p",
+            "webster_four_way",
+            "-d",
+            "5.0",
+            "--controllers",
+            "fixed-time,actuated",
+        ],
+        stdout=stdout,
+        stderr=stderr,
+    )
+    assert ret == 0
+    val = stdout.getvalue()
+    assert "Signal Controller Benchmark Results" in val
+    assert "fixed-time" in val
+    assert "actuated" in val
+
+
+def test_cli_presets_list_and_bare() -> None:
+    stdout_list = io.StringIO()
+    ret_list = main(["presets", "list"], stdout=stdout_list)
+    assert ret_list == 0
+    assert "Available Scenario Presets" in stdout_list.getvalue()
+    assert "webster_four_way" in stdout_list.getvalue()
+
+    stdout_bare = io.StringIO()
+    ret_bare = main(["presets"], stdout=stdout_bare)
+    assert ret_bare == 0
+    assert "Available Scenario Presets" in stdout_bare.getvalue()
+
+
+def test_cli_presets_export(tmp_path: Path) -> None:
+    export_path = tmp_path / "subdir" / "exported_webster.json"
+    stdout = io.StringIO()
+    ret = main(
+        ["presets", "export", "-p", "webster_four_way", "-o", str(export_path)],
+        stdout=stdout,
+    )
+    assert ret == 0
+    assert export_path.exists()
+    assert "Exported preset 'webster_four_way'" in stdout.getvalue()
+
+    stdout_run = io.StringIO()
+    ret_run = main(
+        ["run", "-c", str(export_path), "-d", "5.0"],
+        stdout=stdout_run,
+    )
+    assert ret_run == 0
+    assert "Simulation Execution Summary" in stdout_run.getvalue()
