@@ -1,3 +1,8 @@
+from junction_sim.benchmarks import (
+    BenchmarkHarness,
+    BenchmarkMetrics,
+    BenchmarkResult,
+)
 from junction_sim.controllers.actuated import ActuatedController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
@@ -41,6 +46,9 @@ __all__ = [
     "ActuatedController",
     "Approach",
     "ArrivalGenerator",
+    "BenchmarkHarness",
+    "BenchmarkMetrics",
+    "BenchmarkResult",
     "ConfigurationError",
     "ControllerContext",
     "ControllerDecision",
