@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from junction_sim.domain.approach import Approach
+from junction_sim.domain.crosswalk import Crosswalk
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement
 from junction_sim.exceptions import InvalidGeometryError, ValidationError
@@ -12,6 +13,7 @@ class Intersection(BaseModel):
     id: str = Field(min_length=1)
     approaches: tuple[Approach, ...]
     movements: tuple[Movement, ...]
+    crosswalks: tuple[Crosswalk, ...] = Field(default_factory=tuple)
     conflicting_movement_pairs: frozenset[frozenset[str]] = Field(
         default_factory=frozenset
     )
@@ -73,6 +75,17 @@ class Intersection(BaseModel):
                         f"unknown movement id '{m_id}' in conflicting movement pairs"
                     )
 
+        crosswalk_ids = [cw.id for cw in self.crosswalks]
+        if len(crosswalk_ids) != len(set(crosswalk_ids)):
+            raise InvalidGeometryError("duplicate crosswalk ids found in intersection")
+
+        for cw in self.crosswalks:
+            if cw.approach_id not in approach_id_set:
+                raise InvalidGeometryError(
+                    f"crosswalk '{cw.id}' approach '{cw.approach_id}' "
+                    "does not match any approach"
+                )
+
         return self
 
     def get_approach(self, approach_id: str) -> Approach:
@@ -98,6 +111,14 @@ class Intersection(BaseModel):
                     return lane
         raise InvalidGeometryError(
             f"lane '{lane_id}' not found in intersection '{self.id}'"
+        )
+
+    def get_crosswalk(self, crosswalk_id: str) -> Crosswalk:
+        for cw in self.crosswalks:
+            if cw.id == crosswalk_id:
+                return cw
+        raise InvalidGeometryError(
+            f"crosswalk '{crosswalk_id}' not found in intersection '{self.id}'"
         )
 
     def are_conflicting(self, movement_id_a: str, movement_id_b: str) -> bool:

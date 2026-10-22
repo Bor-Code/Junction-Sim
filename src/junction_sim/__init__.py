@@ -6,6 +6,8 @@ from junction_sim.benchmarks import (
     MultiSeedMetrics,
 )
 from junction_sim.config import (
+    CrosswalkConfig,
+    PedestrianDemandConfig,
     ScenarioConfig,
     SimulationConfig,
     load_scenario_from_dict,
@@ -21,10 +23,12 @@ from junction_sim.controllers.protocol import (
     SignalController,
 )
 from junction_sim.domain.approach import Approach
+from junction_sim.domain.crosswalk import Crosswalk, PedestrianSignalState
 from junction_sim.domain.direction import Direction
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
+from junction_sim.domain.pedestrian import Pedestrian
 from junction_sim.domain.signal import SignalPhase, SignalPlan
 from junction_sim.domain.validation import (
     validate_signal_plan_against_intersection,
@@ -35,9 +39,12 @@ from junction_sim.engine.arrival import (
     ArrivalGenerator,
     DemandInterval,
     DemandProfile,
+    PedestrianArrivalGenerator,
+    PedestrianDemandProfile,
 )
 from junction_sim.engine.clock import SimulationClock
 from junction_sim.engine.engine import SimulationEngine
+from junction_sim.engine.pedestrian_queue import PedestrianQueue
 from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
 from junction_sim.engine.step_result import StepResult
@@ -91,6 +98,8 @@ __all__ = [
     "ControllerContext",
     "ControllerDecision",
     "ControllerError",
+    "Crosswalk",
+    "CrosswalkConfig",
     "DemandInterval",
     "DemandProfile",
     "Direction",
@@ -116,6 +125,12 @@ __all__ = [
     "Movement",
     "MultiSeedBenchmarkResult",
     "MultiSeedMetrics",
+    "Pedestrian",
+    "PedestrianArrivalGenerator",
+    "PedestrianDemandConfig",
+    "PedestrianDemandProfile",
+    "PedestrianQueue",
+    "PedestrianSignalState",
     "PhaseTracker",
     "PresetInfo",
     "build_arterial_corridor_preset",
