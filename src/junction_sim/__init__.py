@@ -91,7 +91,9 @@ from junction_sim.reporting import (
 )
 from junction_sim.rl import JunctionEnv, RLController
 from junction_sim.visualization import (
+    export_3d_html_visualizer,
     export_interactive_html,
+    generate_3d_html_visualizer,
     generate_interactive_html,
     render_ascii_intersection,
     render_queue_bars,
@@ -119,6 +121,7 @@ __all__ = [
     "Direction",
     "DualRingController",
     "DualRingStructure",
+    "export_3d_html_visualizer",
     "export_benchmark_to_csv",
     "export_benchmark_to_json",
     "export_interactive_html",
@@ -127,6 +130,7 @@ __all__ = [
     "export_step_results_to_csv",
     "export_step_results_to_json",
     "FixedTimeController",
+    "generate_3d_html_visualizer",
     "generate_interactive_html",
     "Intersection",
     "InvalidGeometryError",

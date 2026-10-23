@@ -29,6 +29,7 @@ from junction_sim.reporting.json_reporter import (
     export_step_results_to_json,
 )
 from junction_sim.visualization import (
+    export_3d_html_visualizer,
     export_interactive_html,
     render_step_dashboard,
 )
@@ -137,6 +138,20 @@ def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
             step_size=sim_cfg.step_size,
         )
         stdout.write(f"Exported HTML:   {args.out_html}\n")
+
+    if getattr(args, "out_html_3d", None):
+        preset_or_name = getattr(args, "preset", None) or "custom"
+        export_3d_html_visualizer(
+            results=results,
+            intersection=intersection,
+            signal_plan=signal_plan,
+            destination=args.out_html_3d,
+            controller_name=args.controller,
+            scenario_name=preset_or_name,
+            seed=seed,
+            step_size=sim_cfg.step_size,
+        )
+        stdout.write(f"Exported 3D HTML:{args.out_html_3d}\n")
 
     if getattr(args, "dashboard", False):
         stdout.write("\n" + render_step_dashboard(results[-1], plan=signal_plan) + "\n")
@@ -298,18 +313,33 @@ def handle_visualize(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> i
     preset_or_name = getattr(args, "preset", None) or "custom"
     out_html = getattr(args, "out_html", "visualizer.html")
 
-    export_interactive_html(
-        results=results,
-        intersection=intersection,
-        signal_plan=signal_plan,
-        destination=out_html,
-        controller_name=args.controller,
-        scenario_name=preset_or_name,
-        seed=seed,
-        step_size=sim_cfg.step_size,
-    )
+    use_3d = getattr(args, "three_d", False) or getattr(args, "mode", "3d") == "3d"
 
-    stdout.write("Visualization Generated Successfully\n")
+    if use_3d:
+        export_3d_html_visualizer(
+            results=results,
+            intersection=intersection,
+            signal_plan=signal_plan,
+            destination=out_html,
+            controller_name=args.controller,
+            scenario_name=preset_or_name,
+            seed=seed,
+            step_size=sim_cfg.step_size,
+        )
+    else:
+        export_interactive_html(
+            results=results,
+            intersection=intersection,
+            signal_plan=signal_plan,
+            destination=out_html,
+            controller_name=args.controller,
+            scenario_name=preset_or_name,
+            seed=seed,
+            step_size=sim_cfg.step_size,
+        )
+
+    vis_label = "3D Photorealistic WebGL" if use_3d else "2D Interactive Canvas"
+    stdout.write(f"Visualization Generated Successfully ({vis_label})\n")
     stdout.write(f"Controller:      {args.controller}\n")
     stdout.write(f"Duration:        {duration:.1f} s\n")
     stdout.write(f"Steps:           {len(results)}\n")
