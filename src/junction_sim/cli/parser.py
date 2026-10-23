@@ -79,6 +79,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination path to export interactive HTML visualizer",
     )
     run_parser.add_argument(
+        "--out-html-3d",
+        type=str,
+        default=None,
+        help="Destination path to export photorealistic 3D WebGL visualizer",
+    )
+    run_parser.add_argument(
         "--dashboard",
         action="store_true",
         help="Render terminal ASCII dashboard for the final simulation step",
@@ -221,6 +227,21 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         default="visualizer.html",
         help="Target HTML output path (default: visualizer.html)",
+    )
+    vis_parser.add_argument(
+        "--3d",
+        dest="three_d",
+        action="store_true",
+        help="Generate photorealistic 3D WebGL visualizer with Three.js",
+    )
+    vis_parser.add_argument(
+        "--mode",
+        choices=["2d", "3d"],
+        default="3d",
+        help=(
+            "Visualization rendering mode: 2d (canvas) or 3d (photorealistic WebGL) "
+            "(default: 3d)"
+        ),
     )
     vis_parser.add_argument(
         "--open",
