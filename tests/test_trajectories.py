@@ -339,3 +339,34 @@ def test_sample_scene_vehicles_edge_cases() -> None:
     reg = {"v_test": [st]}
     assert len(sample_scene_vehicles(reg, 10.1, tolerance=0.2)) == 1
     assert len(sample_scene_vehicles(reg, 20.0, tolerance=0.2)) == 0
+
+
+def test_queue_slot_spacing_no_overlapping() -> None:
+    intersection, plan = create_four_way_test_intersection()
+    v1 = Vehicle(id="truck_1", origin="north", destination="south", arrival_time=1.0)
+    v2 = Vehicle(id="truck_2", origin="north", destination="south", arrival_time=1.2)
+    v3 = Vehicle(id="truck_3", origin="north", destination="south", arrival_time=1.4)
+
+    step0 = StepResult(
+        step_index=0,
+        time=1.0,
+        active_phase_id="P2",
+        signal_state=SignalState.ALL_RED,
+        arrived_vehicles=(v1, v2, v3),
+        discharged_vehicles=(),
+        queue_lengths={"ln_n0": 3},
+    )
+
+    engine = TrajectoryEngine(intersection, plan, safety_gap=2.5)
+    reg = engine.generate_vehicle_states([step0], substep_dt=0.5)
+
+    pos1 = reg["truck_1"][0]
+    pos2 = reg["truck_2"][0]
+    pos3 = reg["truck_3"][0]
+
+    assert pos1.y < pos2.y < pos3.y
+    assert abs(pos2.y - pos1.y) >= 4.0
+    assert abs(pos3.y - pos2.y) >= 4.0
+
+    assert VehicleType.BOX_TRUCK.value == "box_truck"
+    assert VehicleType.SEMI_TRUCK.value == "semi_truck"

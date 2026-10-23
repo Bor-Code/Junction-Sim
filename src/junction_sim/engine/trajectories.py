@@ -18,6 +18,19 @@ class VehicleType(StrEnum):
     HATCHBACK = "hatchback"
     VAN = "van"
     BUS = "bus"
+    BOX_TRUCK = "box_truck"
+    SEMI_TRUCK = "semi_truck"
+
+
+VEHICLE_LENGTHS: dict[VehicleType, float] = {
+    VehicleType.HATCHBACK: 3.9,
+    VehicleType.SEDAN: 4.4,
+    VehicleType.SUV: 4.8,
+    VehicleType.VAN: 5.6,
+    VehicleType.BOX_TRUCK: 7.8,
+    VehicleType.BUS: 11.2,
+    VehicleType.SEMI_TRUCK: 14.8,
+}
 
 
 class VehicleState3D(BaseModel):
@@ -47,6 +60,8 @@ VEHICLE_COLORS: tuple[str, ...] = (
     "#d97706",
     "#059669",
     "#7c3aed",
+    "#eab308",
+    "#0284c7",
 )
 
 VEHICLE_TYPES: tuple[VehicleType, ...] = (
@@ -55,6 +70,8 @@ VEHICLE_TYPES: tuple[VehicleType, ...] = (
     VehicleType.HATCHBACK,
     VehicleType.VAN,
     VehicleType.BUS,
+    VehicleType.BOX_TRUCK,
+    VehicleType.SEMI_TRUCK,
 )
 
 
@@ -178,12 +195,16 @@ class TrajectoryEngine:
         slot_length: float = 6.5,
         lane_width: float = 3.5,
         transit_duration: float = 3.5,
+        discharge_headway: float = 1.8,
+        safety_gap: float = 2.5,
     ) -> None:
         self.intersection = intersection
         self.signal_plan = signal_plan
         self.slot_length = slot_length
         self.lane_width = lane_width
         self.transit_duration = transit_duration
+        self.discharge_headway = discharge_headway
+        self.safety_gap = safety_gap
 
     def generate_vehicle_states(
         self,
@@ -197,10 +218,14 @@ class TrajectoryEngine:
         app_map = {app.id: app for app in self.intersection.approaches}
 
         dep_info: dict[str, tuple[float, str, str]] = {}
+        discharge_counts: dict[tuple[str, float], int] = {}
         for r in results:
             for v in r.discharged_vehicles:
+                count = discharge_counts.get((v.origin, r.time), 0)
+                discharge_counts[(v.origin, r.time)] = count + 1
+                staggered_time = r.time + count * self.discharge_headway
                 dep_info[v.id] = (
-                    r.time,
+                    staggered_time,
                     v.origin,
                     v.destination,
                 )
@@ -211,7 +236,19 @@ class TrajectoryEngine:
         }
 
         step_times = [r.time for r in results]
-        max_time = step_times[-1] + self.transit_duration + 5.0
+        max_time = step_times[-1] + self.transit_duration + 15.0
+
+        queue_slots: dict[str, float] = {}
+        approach_cumulative: dict[str, float] = {}
+
+        for r in results:
+            for v in r.arrived_vehicles:
+                v_type, _ = get_deterministic_vehicle_attributes(v.id)
+                v_len = VEHICLE_LENGTHS.get(v_type, 4.4)
+                cur_dist = approach_cumulative.get(v.origin, 2.0)
+                center_dist = cur_dist + v_len / 2.0
+                queue_slots[v.id] = center_dist
+                approach_cumulative[v.origin] = cur_dist + v_len + self.safety_gap
 
         for r in results:
             for v in r.arrived_vehicles:
@@ -220,7 +257,7 @@ class TrajectoryEngine:
 
                 app = app_map.get(v.origin)
                 origin_dir = app.direction if app else Direction.NORTH
-                f_in, r_in = get_approach_vectors(origin_dir)
+                f_in, _ = get_approach_vectors(origin_dir)
 
                 stop_x, stop_y, heading_in = get_lane_stop_position(
                     origin_dir,
@@ -253,10 +290,11 @@ class TrajectoryEngine:
                 elif turn_type == TurnType.RIGHT:
                     turn_sig = "right"
 
+                dist_back = queue_slots.get(v.id, 4.0)
+
                 t = v.arrival_time
-                while t <= min(max_time, dep_time + self.transit_duration + 4.0):
+                while t <= min(max_time, dep_time + self.transit_duration + 6.0):
                     if t < dep_time:
-                        dist_back = 2.0
                         vx = stop_x - f_in[0] * dist_back
                         vy = stop_y - f_in[1] * dist_back
                         states.append(
