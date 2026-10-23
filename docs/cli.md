@@ -39,6 +39,7 @@ junction-sim run (-c CONFIG | -p PRESET) [options]
 | `--dashboard` | | flag | False | Render terminal ASCII intersection layout and queue bar charts for the final simulation step. |
 | `--out-csv` | | string | None | Destination path to export step-by-step CSV time series. |
 | `--out-json` | | string | None | Destination path to export detailed simulation execution summary in JSON format. |
+| `--out-html` | | string | None | Destination path to export interactive HTML visualizer. |
 
 #### Examples
 
@@ -115,6 +116,34 @@ junction-sim presets export --preset <PRESET_NAME> --out <FILE_PATH>
 
 ```bash
 junction-sim presets export --preset bottleneck_spillback --out scenarios/spillback_experiment.json
+```
+
+---
+
+### 4. `visualize`
+
+Executes a simulation and exports an interactive HTML5/Canvas visualization file, with optional browser launch.
+
+```bash
+junction-sim visualize (-c CONFIG | -p PRESET) [options]
+```
+
+#### Arguments and Options
+
+| Option | Short | Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `--config` | `-c` | string | None | Path to scenario JSON configuration file. Mutually exclusive with `--preset`. |
+| `--preset` | `-p` | choice | None | Name of standard preset scenario to visualize. |
+| `--controller` | | choice | `fixed-time` | Signal controller policy to use: `fixed-time`, `actuated`, `max-pressure`, `dual-ring`. |
+| `--duration` | `-d` | float | None | Simulation duration in seconds (overrides scenario setting). |
+| `--seed` | `-s` | integer | None | Random number generator seed. |
+| `--out-html` | `-o` | string | `visualizer.html` | Destination path for interactive HTML output. |
+| `--open` | | flag | False | Automatically launch the generated HTML file in default web browser. |
+
+#### Example
+
+```bash
+junction-sim visualize --preset webster_four_way --controller actuated --duration 180.0 --out-html visualizer.html --open
 ```
 
 ---

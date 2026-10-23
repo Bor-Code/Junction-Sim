@@ -73,6 +73,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination path to export detailed JSON results",
     )
     run_parser.add_argument(
+        "--out-html",
+        type=str,
+        default=None,
+        help="Destination path to export interactive HTML visualizer",
+    )
+    run_parser.add_argument(
         "--dashboard",
         action="store_true",
         help="Render terminal ASCII dashboard for the final simulation step",
@@ -169,6 +175,57 @@ def create_parser() -> argparse.ArgumentParser:
         required=True,
         type=str,
         help="Target JSON file path",
+    )
+
+    vis_parser = subparsers.add_parser(
+        "visualize",
+        help="Run simulation and export or open interactive HTML visualizer",
+    )
+    vis_cfg_group = vis_parser.add_mutually_exclusive_group(required=True)
+    vis_cfg_group.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        help="Path to scenario JSON configuration file",
+    )
+    vis_cfg_group.add_argument(
+        "--preset",
+        "-p",
+        type=str,
+        choices=list_presets(),
+        help="Name of built-in scenario preset to visualize",
+    )
+    vis_parser.add_argument(
+        "--controller",
+        choices=["fixed-time", "actuated", "max-pressure", "dual-ring"],
+        default="fixed-time",
+        help="Signal control policy to execute (default: fixed-time)",
+    )
+    vis_parser.add_argument(
+        "--duration",
+        "-d",
+        type=float,
+        default=None,
+        help="Override simulation duration in seconds",
+    )
+    vis_parser.add_argument(
+        "--seed",
+        "-s",
+        type=int,
+        default=None,
+        help="Override random number generator seed",
+    )
+    vis_parser.add_argument(
+        "--out-html",
+        "-o",
+        type=str,
+        default="visualizer.html",
+        help="Target HTML output path (default: visualizer.html)",
+    )
+    vis_parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Automatically open generated visualizer in web browser",
     )
 
     return parser

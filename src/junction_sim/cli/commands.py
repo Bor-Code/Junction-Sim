@@ -1,5 +1,6 @@
 import argparse
 import sys
+import webbrowser
 from pathlib import Path
 from typing import TextIO
 
@@ -27,7 +28,10 @@ from junction_sim.reporting.json_reporter import (
     export_multi_seed_benchmark_to_json,
     export_step_results_to_json,
 )
-from junction_sim.visualization import render_step_dashboard
+from junction_sim.visualization import (
+    export_interactive_html,
+    render_step_dashboard,
+)
 
 
 def instantiate_controller(
@@ -119,6 +123,20 @@ def handle_run(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     if args.out_json:
         export_step_results_to_json(results, destination=args.out_json)
         stdout.write(f"Exported JSON:   {args.out_json}\n")
+
+    if getattr(args, "out_html", None):
+        preset_or_name = getattr(args, "preset", None) or "custom"
+        export_interactive_html(
+            results=results,
+            intersection=intersection,
+            signal_plan=signal_plan,
+            destination=args.out_html,
+            controller_name=args.controller,
+            scenario_name=preset_or_name,
+            seed=seed,
+            step_size=sim_cfg.step_size,
+        )
+        stdout.write(f"Exported HTML:   {args.out_html}\n")
 
     if getattr(args, "dashboard", False):
         stdout.write("\n" + render_step_dashboard(results[-1], plan=signal_plan) + "\n")
@@ -252,4 +270,54 @@ def handle_presets(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int
     stdout.write("-" * 76 + "\n")
     for info in list_presets_info():
         stdout.write(f"{info.name:<24} {info.description}\n")
+    return 0
+
+
+def handle_visualize(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
+    scenario = load_scenario_from_args(args)
+    duration = (
+        args.duration if args.duration is not None else scenario.simulation.duration
+    )
+    seed = args.seed if args.seed is not None else scenario.simulation.seed
+
+    intersection, signal_plan, demands, sim_cfg = scenario.build_scenario()
+    controller = instantiate_controller(args.controller, signal_plan, intersection)
+    ped_demands = scenario.build_pedestrian_demands()
+
+    engine = SimulationEngine(
+        intersection=intersection,
+        signal_plan=signal_plan,
+        demands=demands,
+        pedestrian_demands=ped_demands,
+        controller=controller,
+        step_size=sim_cfg.step_size,
+        seed=seed,
+    )
+
+    results = engine.run(duration)
+    preset_or_name = getattr(args, "preset", None) or "custom"
+    out_html = getattr(args, "out_html", "visualizer.html")
+
+    export_interactive_html(
+        results=results,
+        intersection=intersection,
+        signal_plan=signal_plan,
+        destination=out_html,
+        controller_name=args.controller,
+        scenario_name=preset_or_name,
+        seed=seed,
+        step_size=sim_cfg.step_size,
+    )
+
+    stdout.write("Visualization Generated Successfully\n")
+    stdout.write(f"Controller:      {args.controller}\n")
+    stdout.write(f"Duration:        {duration:.1f} s\n")
+    stdout.write(f"Steps:           {len(results)}\n")
+    stdout.write(f"Exported HTML:   {out_html}\n")
+
+    if getattr(args, "open", False):
+        resolved_uri = Path(out_html).resolve().as_uri()
+        webbrowser.open(resolved_uri)
+        stdout.write(f"Opened visualizer in browser: {resolved_uri}\n")
+
     return 0
