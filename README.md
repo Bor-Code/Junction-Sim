@@ -19,7 +19,7 @@ A discrete-event traffic simulation and signal benchmarking library and CLI for 
   - `ActuatedController`: Dynamic green extension triggered by vehicle presence on detector zones, minimum green enforcement, and headway gap-out logic.
   - `MaxPressureController`: Pressure differential optimization across incoming and outgoing lane queues to maximize network throughput and prevent spillback.
 - **Comparative Benchmarking Harness**: Simultaneous evaluation of multiple signal policies under identical demand profiles, computing throughput, completion rates, average delay, maximum queue, and wasted green time.
-- **Visual Analytics**: Terminal ASCII intersection layout visualization, queue length bar charts, and step summary dashboards.
+- **Visual Analytics**: Interactive standalone HTML5 Canvas playback visualizer, terminal ASCII intersection layout visualization, queue length bar charts, and step summary dashboards.
 - **Standard Scenario Presets**: Built-in benchmark scenarios including Webster symmetric 4-way, asymmetric arterial corridors, peak-hour surges, and bottleneck spillback configurations.
 - **CLI & Declarative Configs**: Command-line interface with `run`, `benchmark`, and `presets` subcommands alongside JSON and CSV time series exporters.
 
@@ -95,6 +95,20 @@ Export a preset to a standalone JSON configuration file for custom editing:
 
 ```bash
 junction-sim presets export --preset webster_four_way --out my_scenario.json
+```
+
+### 4. Interactive HTML5 Visualizer
+
+Run a simulation and export a standalone, interactive HTML5 playback visualizer:
+
+```bash
+junction-sim visualize --preset webster_four_way --controller actuated --duration 120.0 --out-html simulation.html --open
+```
+
+Or export it directly during a simulation run:
+
+```bash
+junction-sim run --preset arterial_corridor --controller max-pressure --out-html arterial.html
 ```
 
 ---

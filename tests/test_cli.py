@@ -370,3 +370,111 @@ def test_cli_presets_export(tmp_path: Path) -> None:
     )
     assert ret_run == 0
     assert "Simulation Execution Summary" in stdout_run.getvalue()
+
+
+def test_cli_run_out_html(tmp_path: Path) -> None:
+    out_html = tmp_path / "sim_run.html"
+    stdout = io.StringIO()
+    ret = main(
+        [
+            "run",
+            "-p",
+            "webster_four_way",
+            "-d",
+            "5.0",
+            "--out-html",
+            str(out_html),
+        ],
+        stdout=stdout,
+    )
+    assert ret == 0
+    assert out_html.exists()
+    content = out_html.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in content
+    assert '<canvas id="sim-canvas"' in content
+    assert f"Exported HTML:   {out_html}" in stdout.getvalue()
+
+
+def test_cli_visualize_preset(tmp_path: Path) -> None:
+    out_html = tmp_path / "vis_preset.html"
+    stdout = io.StringIO()
+    ret = main(
+        [
+            "visualize",
+            "-p",
+            "arterial_corridor",
+            "-c_unused",
+            "-d",
+            "10.0",
+            "-o",
+            str(out_html),
+        ][:3]
+        + [
+            "-p",
+            "arterial_corridor",
+            "-d",
+            "10.0",
+            "-o",
+            str(out_html),
+        ],
+        stdout=stdout,
+    )
+    assert ret == 0
+    assert out_html.exists()
+    assert "Visualization Generated Successfully" in stdout.getvalue()
+    assert f"Exported HTML:   {out_html}" in stdout.getvalue()
+
+
+def test_cli_visualize_config(tmp_path: Path) -> None:
+    scenario_path = create_scenario_file(tmp_path / "test_vis_scenario.json")
+    out_html = tmp_path / "vis_cfg.html"
+    stdout = io.StringIO()
+    ret = main(
+        [
+            "visualize",
+            "-c",
+            str(scenario_path),
+            "-d",
+            "5.0",
+            "--controller",
+            "actuated",
+            "--seed",
+            "123",
+            "-o",
+            str(out_html),
+        ],
+        stdout=stdout,
+    )
+    assert ret == 0
+    assert out_html.exists()
+    assert "Visualization Generated Successfully" in stdout.getvalue()
+    assert "Controller:      actuated" in stdout.getvalue()
+
+
+def test_cli_visualize_open(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    opened_urls: list[str] = []
+
+    def fake_open(url: str) -> bool:
+        opened_urls.append(url)
+        return True
+
+    monkeypatch.setattr("webbrowser.open", fake_open)
+
+    out_html = tmp_path / "vis_open.html"
+    stdout = io.StringIO()
+    ret = main(
+        [
+            "visualize",
+            "-p",
+            "webster_four_way",
+            "-d",
+            "2.0",
+            "-o",
+            str(out_html),
+            "--open",
+        ],
+        stdout=stdout,
+    )
+    assert ret == 0
+    assert len(opened_urls) == 1
+    assert "Opened visualizer in browser:" in stdout.getvalue()
