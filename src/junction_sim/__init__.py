@@ -54,6 +54,11 @@ from junction_sim.engine.pedestrian_queue import PedestrianQueue
 from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
 from junction_sim.engine.step_result import StepResult
+from junction_sim.engine.trajectories import (
+    TrajectoryEngine,
+    VehicleState3D,
+    VehicleType,
+)
 from junction_sim.engine.transition import PhaseTracker, SignalState
 from junction_sim.exceptions import (
     ConfigurationError,
@@ -172,9 +177,12 @@ __all__ = [
     "SimulationError",
     "StepResult",
     "TrafficRNG",
+    "TrajectoryEngine",
     "TurnType",
     "ValidationError",
     "Vehicle",
+    "VehicleState3D",
+    "VehicleType",
     "__version__",
     "validate_signal_plan_against_intersection",
     "validate_vehicle_against_intersection",
