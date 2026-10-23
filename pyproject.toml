@@ -13,14 +13,35 @@ authors = [
     { name = "Boran and Junction-Sim Contributors" }
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+keywords = [
+    "traffic",
+    "traffic-simulation",
+    "signal-control",
+    "discrete-event-simulation",
+    "intelligent-transportation-systems",
+    "reinforcement-learning",
+    "nema",
+    "benchmarking",
 ]
 dependencies = [
     "pydantic>=2.7.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Bor-Code/Junction-Sim"
+Documentation = "https://github.com/Bor-Code/Junction-Sim#readme"
+Repository = "https://github.com/Bor-Code/Junction-Sim"
+Issues = "https://github.com/Bor-Code/Junction-Sim/issues"
+Changelog = "https://github.com/Bor-Code/Junction-Sim/blob/main/CHANGELOG.md"
 
 [project.scripts]
 junction-sim = "junction_sim.cli:main"
