@@ -4,6 +4,7 @@ from typing import TextIO
 
 from junction_sim.cli.commands import (
     handle_benchmark,
+    handle_export_blender,
     handle_presets,
     handle_run,
     handle_visualize,
@@ -34,6 +35,8 @@ def main(
             return handle_benchmark(args, stdout=stdout)
         if args.command == "visualize":
             return handle_visualize(args, stdout=stdout)
+        if args.command == "export-blender":
+            return handle_export_blender(args, stdout=stdout)
         return handle_presets(args, stdout=stdout)
     except JunctionSimError as exc:
         stderr.write(f"Error: {exc}\n")
