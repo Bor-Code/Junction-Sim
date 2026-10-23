@@ -1,6 +1,11 @@
 from junction_sim.domain.approach import Approach
 from junction_sim.domain.crosswalk import Crosswalk, PedestrianSignalState
 from junction_sim.domain.direction import Direction
+from junction_sim.domain.dual_ring import (
+    DualRingStructure,
+    NEMAPhase,
+    build_nema_eight_phase_structure,
+)
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
@@ -16,9 +21,11 @@ __all__ = [
     "Approach",
     "Crosswalk",
     "Direction",
+    "DualRingStructure",
     "Intersection",
     "Lane",
     "Movement",
+    "NEMAPhase",
     "Pedestrian",
     "PedestrianSignalState",
     "SignalPhase",
@@ -26,6 +33,7 @@ __all__ = [
     "SignalState",
     "TurnType",
     "Vehicle",
+    "build_nema_eight_phase_structure",
     "validate_signal_plan_against_intersection",
     "validate_vehicle_against_intersection",
 ]

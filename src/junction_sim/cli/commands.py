@@ -7,9 +7,11 @@ from junction_sim.benchmarks.harness import BenchmarkHarness
 from junction_sim.config.loader import load_scenario_from_file
 from junction_sim.config.schema import ScenarioConfig
 from junction_sim.controllers.actuated import ActuatedController
+from junction_sim.controllers.dual_ring import DualRingController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
 from junction_sim.controllers.protocol import SignalController
+from junction_sim.domain.dual_ring import build_nema_eight_phase_structure
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.engine.engine import SimulationEngine
@@ -37,9 +39,20 @@ def instantiate_controller(
         return ActuatedController(signal_plan=signal_plan, intersection=intersection)
     if name == "max-pressure":
         return MaxPressureController(signal_plan=signal_plan, intersection=intersection)
+    if name == "dual-ring":
+        try:
+            structure = build_nema_eight_phase_structure(intersection)
+        except Exception as exc:
+            raise ConfigurationError(
+                f"intersection '{intersection.id}' is incompatible with "
+                f"dual-ring controller: {exc}"
+            ) from exc
+        return DualRingController(
+            dual_ring=structure, signal_plan=signal_plan, intersection=intersection
+        )
     raise ConfigurationError(
         f"unknown controller '{name}', expected one of: "
-        "fixed-time, actuated, max-pressure"
+        "fixed-time, actuated, max-pressure, dual-ring"
     )
 
 
