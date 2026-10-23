@@ -42,7 +42,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument(
         "--controller",
-        choices=["fixed-time", "actuated", "max-pressure"],
+        choices=["fixed-time", "actuated", "max-pressure", "dual-ring"],
         default="fixed-time",
         help="Signal control policy to execute (default: fixed-time)",
     )

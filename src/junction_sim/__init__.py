@@ -15,6 +15,7 @@ from junction_sim.config import (
     load_scenario_from_json,
 )
 from junction_sim.controllers.actuated import ActuatedController
+from junction_sim.controllers.dual_ring import DualRingController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
 from junction_sim.controllers.protocol import (
@@ -25,6 +26,11 @@ from junction_sim.controllers.protocol import (
 from junction_sim.domain.approach import Approach
 from junction_sim.domain.crosswalk import Crosswalk, PedestrianSignalState
 from junction_sim.domain.direction import Direction
+from junction_sim.domain.dual_ring import (
+    DualRingStructure,
+    NEMAPhase,
+    build_nema_eight_phase_structure,
+)
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
@@ -103,6 +109,8 @@ __all__ = [
     "DemandInterval",
     "DemandProfile",
     "Direction",
+    "DualRingController",
+    "DualRingStructure",
     "export_benchmark_to_csv",
     "export_benchmark_to_json",
     "export_multi_seed_benchmark_to_csv",
@@ -125,6 +133,7 @@ __all__ = [
     "Movement",
     "MultiSeedBenchmarkResult",
     "MultiSeedMetrics",
+    "NEMAPhase",
     "Pedestrian",
     "PedestrianArrivalGenerator",
     "PedestrianDemandConfig",
@@ -135,6 +144,7 @@ __all__ = [
     "PresetInfo",
     "build_arterial_corridor_preset",
     "build_bottleneck_spillback_preset",
+    "build_nema_eight_phase_structure",
     "build_peak_hour_surge_preset",
     "build_webster_four_way_preset",
     "get_preset",
