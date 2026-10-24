@@ -1,4 +1,5 @@
 import argparse
+import subprocess
 import sys
 import webbrowser
 from pathlib import Path
@@ -32,6 +33,7 @@ from junction_sim.visualization import (
     export_3d_html_visualizer,
     export_blender_script,
     export_interactive_html,
+    find_blender_executable,
     render_step_dashboard,
 )
 
@@ -325,8 +327,37 @@ def handle_visualize(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> i
 
     results = engine.run(duration)
     preset_or_name = getattr(args, "preset", None) or "custom"
-    out_html = getattr(args, "out_html", "visualizer.html")
 
+    if getattr(args, "blender", False):
+        blend_file = "junction_simulation.blend"
+        script_file = "junction_scene.py"
+        export_blender_script(
+            results=results,
+            intersection=intersection,
+            signal_plan=signal_plan,
+            destination=script_file,
+            controller_name=args.controller,
+            scenario_name=preset_or_name,
+            seed=seed,
+            fps=30,
+            blend_destination=blend_file,
+        )
+        stdout.write("Blender 3D Simulation Generated Successfully\n")
+        stdout.write(f"Controller:      {args.controller}\n")
+        stdout.write(f"Duration:        {duration:.1f} s\n")
+        stdout.write(f"Steps:           {len(results)}\n")
+        stdout.write(f"Exported Script: {script_file}\n")
+        stdout.write(f"Compiled Blend:  {blend_file}\n")
+        if getattr(args, "open", False):
+            blender_bin = find_blender_executable()
+            if blender_bin and Path(blend_file).is_file():
+                subprocess.Popen([blender_bin, str(Path(blend_file).resolve())])
+                stdout.write(f"Opened scene in Blender: {blend_file}\n")
+            else:
+                stdout.write("Blender executable not found to open GUI\n")
+        return 0
+
+    out_html = getattr(args, "out_html", "visualizer.html")
     use_3d = getattr(args, "three_d", False) or getattr(args, "mode", "3d") == "3d"
 
     if use_3d:
@@ -392,6 +423,11 @@ def handle_export_blender(args: argparse.Namespace, stdout: TextIO = sys.stdout)
     preset_or_name = getattr(args, "preset", None) or "custom"
     fps = getattr(args, "fps", 24)
 
+    target_blend: str | None = getattr(args, "blend", None)
+    should_open: bool = getattr(args, "open", False)
+    if should_open and not target_blend:
+        target_blend = str(Path(args.out).with_suffix(".blend"))
+
     export_blender_script(
         results=results,
         intersection=intersection,
@@ -401,6 +437,7 @@ def handle_export_blender(args: argparse.Namespace, stdout: TextIO = sys.stdout)
         scenario_name=preset_or_name,
         seed=seed,
         fps=fps,
+        blend_destination=target_blend,
     )
 
     stdout.write("Blender Scene Script Generated Successfully\n")
@@ -409,4 +446,18 @@ def handle_export_blender(args: argparse.Namespace, stdout: TextIO = sys.stdout)
     stdout.write(f"FPS:             {fps}\n")
     stdout.write(f"Steps:           {len(results)}\n")
     stdout.write(f"Exported Script: {args.out}\n")
+
+    if target_blend:
+        if Path(target_blend).is_file():
+            stdout.write(f"Compiled Blend:  {target_blend}\n")
+            if should_open:
+                blender_bin = find_blender_executable()
+                if blender_bin:
+                    subprocess.Popen([blender_bin, str(Path(target_blend).resolve())])
+                    stdout.write(f"Opened scene in Blender: {target_blend}\n")
+                else:
+                    stdout.write("Blender executable not found to open GUI\n")
+        else:
+            stdout.write(f"Warning: Failed to compile blend file {target_blend}\n")
+
     return 0

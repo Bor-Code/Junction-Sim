@@ -250,6 +250,11 @@ def create_parser() -> argparse.ArgumentParser:
         ),
     )
     vis_parser.add_argument(
+        "--blender",
+        action="store_true",
+        help="Compile and launch 3D simulation directly in Blender",
+    )
+    vis_parser.add_argument(
         "--open",
         action="store_true",
         help="Automatically open generated visualizer in web browser",
@@ -305,6 +310,18 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         required=True,
         help="Target Blender Python script destination path",
+    )
+    blender_parser.add_argument(
+        "--blend",
+        "-b",
+        type=str,
+        default=None,
+        help="Optional path to compile native .blend scene file using Blender",
+    )
+    blender_parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Automatically open generated scene in Blender 3D interface",
     )
 
     return parser
