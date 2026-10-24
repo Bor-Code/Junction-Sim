@@ -217,18 +217,14 @@ class TrajectoryEngine:
 
         app_map = {app.id: app for app in self.intersection.approaches}
 
-        dep_info: dict[str, tuple[float, str, str]] = {}
-        discharge_counts: dict[tuple[str, float], int] = {}
+        dep_times: dict[str, float] = {}
+        last_dep_per_app: dict[str, float] = {}
         for r in results:
             for v in r.discharged_vehicles:
-                count = discharge_counts.get((v.origin, r.time), 0)
-                discharge_counts[(v.origin, r.time)] = count + 1
-                staggered_time = r.time + count * self.discharge_headway
-                dep_info[v.id] = (
-                    staggered_time,
-                    v.origin,
-                    v.destination,
-                )
+                last_t = last_dep_per_app.get(v.origin, -1.0)
+                t_dep = max(r.time, last_t + self.discharge_headway)
+                last_dep_per_app[v.origin] = t_dep
+                dep_times[v.id] = t_dep
 
         od_to_turn: dict[tuple[str, str], TurnType] = {
             (mv.origin, mv.destination): mv.turn_type
@@ -236,71 +232,70 @@ class TrajectoryEngine:
         }
 
         step_times = [r.time for r in results]
-        max_time = step_times[-1] + self.transit_duration + 15.0
+        max_time = step_times[-1] + self.transit_duration + 20.0
+        num_substeps = int(max_time / substep_dt) + 1
+        times = [round(i * substep_dt, 3) for i in range(num_substeps)]
 
-        all_arrived_vehicles = [
-            (idx, v) for r in results for idx, v in enumerate(r.arrived_vehicles)
-        ]
-
-        queue_slots: dict[str, float] = {}
-        for idx, v in all_arrived_vehicles:
-            ahead_vehicles = [
-                (p_idx, p_v)
-                for p_idx, p_v in all_arrived_vehicles
-                if p_v.origin == v.origin
-                and p_v.id != v.id
-                and (
-                    p_v.arrival_time < v.arrival_time
-                    or (p_v.arrival_time == v.arrival_time and p_idx < idx)
-                )
-                and dep_info.get(p_v.id, (max_time + 100.0,))[0] > v.arrival_time
-            ]
-            ahead_vehicles.sort(key=lambda item: (item[1].arrival_time, item[0]))
-
-            offset = 2.0
-            for _, p_v in ahead_vehicles:
-                p_type, _ = get_deterministic_vehicle_attributes(p_v.id)
-                p_len = VEHICLE_LENGTHS.get(p_type, 4.4)
-                offset += p_len + self.safety_gap
-
-            v_type, _ = get_deterministic_vehicle_attributes(v.id)
-            v_len = VEHICLE_LENGTHS.get(v_type, 4.4)
-            queue_slots[v.id] = offset + v_len / 2.0
-
+        app_vehicles: dict[str, list[Any]] = {}
         for r in results:
             for v in r.arrived_vehicles:
+                app_vehicles.setdefault(v.origin, []).append(v)
+
+        for app_id, v_list in app_vehicles.items():
+            app = app_map.get(app_id)
+            origin_dir = app.direction if app else Direction.NORTH
+            f_in, _ = get_approach_vectors(origin_dir)
+            total_lanes = len(app.lanes) if app else 1
+
+            stop_x, stop_y, heading_in = get_lane_stop_position(
+                origin_dir, 0, total_lanes, lane_width=self.lane_width
+            )
+
+            s_hist: dict[str, dict[float, float]] = {}
+
+            for v_idx, v in enumerate(v_list):
+                s_hist[v.id] = {}
                 v_type, color = get_deterministic_vehicle_attributes(v.id)
                 v_len = VEHICLE_LENGTHS.get(v_type, 4.4)
-                states: list[VehicleState3D] = []
-
-                app = app_map.get(v.origin)
-                origin_dir = app.direction if app else Direction.NORTH
-                f_in, _ = get_approach_vectors(origin_dir)
-
-                stop_x, stop_y, heading_in = get_lane_stop_position(
-                    origin_dir,
-                    lane_index=0,
-                    total_lanes=len(app.lanes) if app else 1,
-                    lane_width=self.lane_width,
-                )
+                v_dep = dep_times.get(v.id, max_time + 100.0)
 
                 dest_app = app_map.get(v.destination)
                 dest_dir = dest_app.direction if dest_app else Direction.SOUTH
-                exit_x, exit_y, heading_out = get_outbound_exit_position(
-                    dest_dir,
-                    lane_width=self.lane_width,
-                )
-
                 turn_type = od_to_turn.get((v.origin, v.destination), TurnType.THROUGH)
+                exit_x, exit_y, heading_out = get_outbound_exit_position(
+                    dest_dir, lane_width=self.lane_width
+                )
 
                 p_start = (stop_x, stop_y)
                 p_end = (exit_x, exit_y)
                 cp0, cp1, cp2, cp3 = build_turn_control_points(
                     origin_dir, dest_dir, turn_type, p_start, p_end
                 )
+                if turn_type == TurnType.THROUGH:
+                    l_transit = 36.0
+                elif turn_type == TurnType.LEFT:
+                    l_transit = 28.0
+                else:
+                    l_transit = 16.0
 
-                dep = dep_info.get(v.id)
-                dep_time = dep[0] if dep is not None else max_time + 100.0
+                prev_v = v_list[v_idx - 1] if v_idx > 0 else None
+                t_arr = v.arrival_time
+                s_stop = -v_len / 2.0 - 0.5
+
+                if (
+                    prev_v is not None
+                    and prev_v.id in s_hist
+                    and t_arr in s_hist[prev_v.id]
+                ):
+                    prev_s = s_hist[prev_v.id][t_arr]
+                    prev_type, _ = get_deterministic_vehicle_attributes(prev_v.id)
+                    prev_len = VEHICLE_LENGTHS.get(prev_type, 4.4)
+                    s_cap_arr = prev_s - (prev_len + v_len) / 2.0 - self.safety_gap
+                else:
+                    s_cap_arr = s_stop
+
+                cur_s = min(s_stop, s_cap_arr)
+                cur_spd = 0.0
 
                 turn_sig = "none"
                 if turn_type == TurnType.LEFT:
@@ -308,127 +303,91 @@ class TrajectoryEngine:
                 elif turn_type == TurnType.RIGHT:
                     turn_sig = "right"
 
-                dist_back = queue_slots.get(v.id, 4.0)
-                front_dist = 2.0 + v_len / 2.0
-                is_front = dist_back <= (front_dist + 0.1)
+                v_states: list[VehicleState3D] = []
+                for t in times:
+                    if t < t_arr:
+                        continue
 
-                if is_front:
-                    t_start_roll = dep_time
-                    roll_advance = 0.0
-                else:
-                    roll_advance = dist_back - front_dist
-                    duration_needed = max(1.2, roll_advance / 4.5)
-                    available_wait = max(0.0, dep_time - v.arrival_time)
-                    roll_dur = min(duration_needed, max(0.8, available_wait * 0.75))
-                    t_start_roll = max(v.arrival_time + 0.001, dep_time - roll_dur)
+                    s_stop_lim = s_stop if t < v_dep else 999.0
+                    if (
+                        prev_v is not None
+                        and prev_v.id in s_hist
+                        and t in s_hist[prev_v.id]
+                    ):
+                        prev_s = s_hist[prev_v.id][t]
+                        prev_type, _ = get_deterministic_vehicle_attributes(prev_v.id)
+                        prev_len = VEHICLE_LENGTHS.get(prev_type, 4.4)
+                        s_fol_lim = prev_s - (prev_len + v_len) / 2.0 - self.safety_gap
+                    else:
+                        s_fol_lim = 999.0
 
-                v_turn = 7.5 if turn_type != TurnType.THROUGH else 9.0
+                    s_cap = min(s_stop_lim, s_fol_lim)
+                    avail = max(0.0, s_cap - cur_s)
 
-                t = v.arrival_time
-                while t <= min(max_time, dep_time + self.transit_duration + 8.0):
-                    if t < t_start_roll:
-                        vx = stop_x - f_in[0] * dist_back
-                        vy = stop_y - f_in[1] * dist_back
-                        states.append(
-                            VehicleState3D(
-                                time=round(t, 3),
-                                vehicle_id=v.id,
-                                x=round(vx, 3),
-                                y=round(vy, 3),
-                                z=0.0,
-                                heading=round(heading_in, 4),
-                                speed=0.0,
-                                acceleration=0.0,
-                                steering_angle=0.0,
-                                brake_light=True,
-                                turn_signal=turn_sig,
-                                vehicle_type=v_type,
-                                color=color,
-                            )
-                        )
-                    elif t < dep_time:
-                        denom = max(0.01, dep_time - t_start_roll)
-                        u_roll = max(0.0, min(1.0, (t - t_start_roll) / denom))
-                        smooth_u = 0.5 * (1.0 - math.cos(u_roll * math.pi))
-                        cur_dist = dist_back - roll_advance * smooth_u
-                        vx = stop_x - f_in[0] * cur_dist
-                        vy = stop_y - f_in[1] * cur_dist
-                        spd = v_turn * math.sin(u_roll * math.pi / 2.0)
-                        states.append(
-                            VehicleState3D(
-                                time=round(t, 3),
-                                vehicle_id=v.id,
-                                x=round(vx, 3),
-                                y=round(vy, 3),
-                                z=0.0,
-                                heading=round(heading_in, 4),
-                                speed=round(spd, 2),
-                                acceleration=1.4,
-                                steering_angle=0.0,
-                                brake_light=False,
-                                turn_signal=turn_sig,
-                                vehicle_type=v_type,
-                                color=color,
-                            )
-                        )
-                    elif t <= dep_time + self.transit_duration:
-                        progress = (t - dep_time) / self.transit_duration
-                        px, py, h = compute_bezier_point(cp0, cp1, cp2, cp3, progress)
-                        steer = 0.0
+                    v_max = 8.0 if cur_s < l_transit else 12.5
+                    if avail > 0.05:
+                        target_v = min(v_max, math.sqrt(2.0 * 2.0 * avail))
+                    else:
+                        target_v = 0.0
+
+                    prev_spd = cur_spd
+                    if target_v > cur_spd:
+                        cur_spd = min(target_v, cur_spd + 2.0 * substep_dt)
+                    else:
+                        cur_spd = max(target_v, cur_spd - 2.5 * substep_dt)
+
+                    cur_s = min(s_cap, cur_s + cur_spd * substep_dt)
+                    s_hist[v.id][t] = cur_s
+
+                    acc = (cur_spd - prev_spd) / substep_dt
+                    brk = (cur_spd < 0.1 and cur_s <= 0.0) or (acc < -0.8)
+
+                    steer = 0.0
+                    if cur_s <= 0.0:
+                        dist_back = -cur_s
+                        px = stop_x - f_in[0] * dist_back
+                        py = stop_y - f_in[1] * dist_back
+                        ph = heading_in
+                        sig = turn_sig if dist_back < 25.0 else "none"
+                    elif cur_s <= l_transit:
+                        u = cur_s / l_transit
+                        px, py, ph = compute_bezier_point(cp0, cp1, cp2, cp3, u)
+                        sig = turn_sig
                         if turn_type == TurnType.LEFT:
-                            steer = 0.35 * math.sin(progress * math.pi)
+                            steer = 0.35 * math.sin(u * math.pi)
                         elif turn_type == TurnType.RIGHT:
-                            steer = -0.45 * math.sin(progress * math.pi)
-
-                        spd = v_turn + 1.5 * math.sin(progress * math.pi / 2.0)
-                        states.append(
-                            VehicleState3D(
-                                time=round(t, 3),
-                                vehicle_id=v.id,
-                                x=round(px, 3),
-                                y=round(py, 3),
-                                z=0.0,
-                                heading=round(h, 4),
-                                speed=round(spd, 2),
-                                acceleration=0.8,
-                                steering_angle=round(steer, 4),
-                                brake_light=False,
-                                turn_signal=turn_sig,
-                                vehicle_type=v_type,
-                                color=color,
-                            )
-                        )
+                            steer = -0.45 * math.sin(u * math.pi)
                     else:
                         out_f, _ = get_approach_vectors(dest_dir)
                         opp_out_f = (-out_f[0], -out_f[1])
-                        dt_out = t - (dep_time + self.transit_duration)
-                        ramp_u = min(1.0, dt_out / 2.5)
-                        v_cur = (v_turn + 1.5) + (12.5 - (v_turn + 1.5)) * ramp_u
-                        dist_traveled = (v_turn + 1.5) * dt_out + 0.5 * (
-                            12.5 - (v_turn + 1.5)
-                        ) * ramp_u * dt_out
-                        vx = exit_x + opp_out_f[0] * dist_traveled
-                        vy = exit_y + opp_out_f[1] * dist_traveled
-                        states.append(
-                            VehicleState3D(
-                                time=round(t, 3),
-                                vehicle_id=v.id,
-                                x=round(vx, 3),
-                                y=round(vy, 3),
-                                z=0.0,
-                                heading=round(heading_out, 4),
-                                speed=round(v_cur, 2),
-                                acceleration=0.5 if ramp_u < 1.0 else 0.0,
-                                steering_angle=0.0,
-                                brake_light=False,
-                                turn_signal="none",
-                                vehicle_type=v_type,
-                                color=color,
-                            )
-                        )
-                    t += substep_dt
+                        d_out = cur_s - l_transit
+                        px = exit_x + opp_out_f[0] * d_out
+                        py = exit_y + opp_out_f[1] * d_out
+                        ph = heading_out
+                        sig = "none"
 
-                registry[v.id] = states
+                    v_states.append(
+                        VehicleState3D(
+                            time=round(t, 3),
+                            vehicle_id=v.id,
+                            x=round(px, 3),
+                            y=round(py, 3),
+                            z=0.0,
+                            heading=round(ph, 4),
+                            speed=round(cur_spd, 2),
+                            acceleration=round(acc, 2),
+                            steering_angle=round(steer, 4),
+                            brake_light=brk,
+                            turn_signal=sig,
+                            vehicle_type=v_type,
+                            color=color,
+                        )
+                    )
+
+                    if cur_s > l_transit + 90.0:
+                        break
+
+                registry[v.id] = v_states
 
         return registry
 

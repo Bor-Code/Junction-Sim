@@ -1282,47 +1282,7 @@ def generate_3d_html_visualizer(
       const first = states[0];
       const last = states[states.length - 1];
 
-      if (t < first.time) {
-        if (t < first.time - 4.0) return null;
-        const dtApp = first.time - t;
-        const uApp = dtApp / 4.0;
-        const distApp = 34.0 * (uApp * uApp);
-        const fwdX = Math.cos(first.heading);
-        const fwdY = Math.sin(first.heading);
-        return {
-          vehicle_id: first.vehicle_id,
-          x: first.x - fwdX * distApp,
-          y: first.y - fwdY * distApp,
-          heading: first.heading,
-          speed: Math.max(0.0, 9.0 * (1.0 - (1.0 - uApp) * 0.75)),
-          acceleration: -1.8,
-          steering_angle: 0.0,
-          brake_light: dtApp < 2.5,
-          turn_signal: first.turn_signal,
-          vehicle_type: first.vehicle_type,
-          color: first.color
-        };
-      }
-
-      if (t > last.time) {
-        if (t > last.time + 8.0) return null;
-        const dtOut = t - last.time;
-        const fwdX = Math.cos(last.heading);
-        const fwdY = Math.sin(last.heading);
-        return {
-          vehicle_id: last.vehicle_id,
-          x: last.x + fwdX * (12.5 * dtOut),
-          y: last.y + fwdY * (12.5 * dtOut),
-          heading: last.heading,
-          speed: 12.5,
-          acceleration: 0.0,
-          steering_angle: 0.0,
-          brake_light: false,
-          turn_signal: 'none',
-          vehicle_type: last.vehicle_type,
-          color: last.color
-        };
-      }
+      if (t < first.time || t > last.time) return null;
 
       let low = 0, high = states.length - 1;
       while (low <= high) {
