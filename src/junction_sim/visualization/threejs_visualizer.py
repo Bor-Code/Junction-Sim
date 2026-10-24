@@ -419,7 +419,6 @@ def generate_3d_html_visualizer(
     scene.add(sunLight);
 
     const signalMeshes = {};
-    const pedestrians = [];
 
     function createSignboardTexture() {
       const cv = document.createElement('canvas');
@@ -635,7 +634,6 @@ def generate_3d_html_visualizer(
       buildBuildingsAndScenery();
       buildConstructionSite();
       buildRoadSigns();
-      buildPedestrians();
       buildCurvedGantrySignals();
     }
 
@@ -851,59 +849,6 @@ def generate_3d_html_visualizer(
       wSign2.position.set(-13, 2.6, 18);
       wSign2.rotation.y = Math.PI / 6;
       scene.add(wSign2);
-    }
-
-    function buildPedestrians() {
-      const pMats = [
-        new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.8 }),
-        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.8 }),
-        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.8 }),
-        new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.8 })
-      ];
-      const skinMat = new THREE.MeshStandardMaterial({
-        color: 0xfbbf24, roughness: 0.7
-      });
-      const pantMat = new THREE.MeshStandardMaterial({
-        color: 0x1e293b, roughness: 0.9
-      });
-
-      const pConfigs = [
-        { x: -11, z: 16.5, targetX: 11, targetZ: 16.5 },
-        { x: 11, z: 16.5, targetX: -11, targetZ: 16.5 },
-        { x: -11, z: -16.5, targetX: 11, targetZ: -16.5 },
-        { x: 16.5, z: -11, targetX: 16.5, targetZ: 11 }
-      ];
-
-      pConfigs.forEach((cfg, idx) => {
-        const pGroup = new THREE.Group();
-        pGroup.position.set(cfg.x, 0, cfg.z);
-
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(0.5, 0.75, 0.35), pMats[idx % pMats.length]
-        );
-        body.position.y = 1.15;
-        body.castShadow = true;
-        pGroup.add(body);
-
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), skinMat);
-        head.position.y = 1.68;
-        head.castShadow = true;
-        pGroup.add(head);
-
-        const legGeo = new THREE.BoxGeometry(0.18, 0.75, 0.22);
-        const legL = new THREE.Mesh(legGeo, pantMat);
-        legL.position.set(-0.14, 0.45, 0);
-        legL.castShadow = true;
-        pGroup.add(legL);
-
-        const legR = new THREE.Mesh(legGeo, pantMat);
-        legR.position.set(0.14, 0.45, 0);
-        legR.castShadow = true;
-        pGroup.add(legR);
-
-        scene.add(pGroup);
-        pedestrians.push({ group: pGroup, legL, legR, ...cfg });
-      });
     }
 
     function buildCurvedGantrySignals() {
@@ -1376,18 +1321,6 @@ def generate_3d_html_visualizer(
           }
         });
       }
-
-      pedestrians.forEach(p => {
-        const isNS = currentStep && currentStep.active_phase_id === 'P1';
-        if (isNS) {
-          const pProg = Math.sin(t * 0.5) * 0.5 + 0.5;
-          p.group.position.x = p.x + (p.targetX - p.x) * pProg;
-          p.group.position.z = p.z + (p.targetZ - p.z) * pProg;
-          p.group.position.y = Math.abs(Math.sin(t * 8)) * 0.08;
-          p.legL.rotation.x = Math.sin(t * 8) * 0.5;
-          p.legR.rotation.x = -Math.sin(t * 8) * 0.5;
-        }
-      });
 
       document.getElementById('hud-active-veh').textContent = activeCount;
 

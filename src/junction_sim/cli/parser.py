@@ -85,12 +85,6 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination path to export photorealistic 3D WebGL visualizer",
     )
     run_parser.add_argument(
-        "--export-blender",
-        type=str,
-        default=None,
-        help="Destination path to export Blender Python simulation script",
-    )
-    run_parser.add_argument(
         "--dashboard",
         action="store_true",
         help="Render terminal ASCII dashboard for the final simulation step",
@@ -250,78 +244,9 @@ def create_parser() -> argparse.ArgumentParser:
         ),
     )
     vis_parser.add_argument(
-        "--blender",
-        action="store_true",
-        help="Compile and launch 3D simulation directly in Blender",
-    )
-    vis_parser.add_argument(
         "--open",
         action="store_true",
         help="Automatically open generated visualizer in web browser",
-    )
-
-    blender_parser = subparsers.add_parser(
-        "export-blender",
-        help="Run simulation and export standalone Blender Python scene script",
-    )
-    blender_cfg_group = blender_parser.add_mutually_exclusive_group(required=True)
-    blender_cfg_group.add_argument(
-        "--config",
-        "-c",
-        type=str,
-        help="Path to scenario JSON configuration file",
-    )
-    blender_cfg_group.add_argument(
-        "--preset",
-        "-p",
-        type=str,
-        choices=list_presets(),
-        help="Name of built-in scenario preset to export for Blender",
-    )
-    blender_parser.add_argument(
-        "--controller",
-        choices=["fixed-time", "actuated", "max-pressure", "dual-ring"],
-        default="fixed-time",
-        help="Signal control policy to execute (default: fixed-time)",
-    )
-    blender_parser.add_argument(
-        "--duration",
-        "-d",
-        type=float,
-        default=None,
-        help="Override simulation duration in seconds",
-    )
-    blender_parser.add_argument(
-        "--seed",
-        "-s",
-        type=int,
-        default=None,
-        help="Override random number generator seed",
-    )
-    blender_parser.add_argument(
-        "--fps",
-        type=int,
-        default=24,
-        help="Blender animation frames per second (default: 24)",
-    )
-    blender_parser.add_argument(
-        "--out",
-        "-o",
-        type=str,
-        required=True,
-        help="Target Blender Python script destination path",
-    )
-    blender_parser.add_argument(
-        "--blend",
-        "-b",
-        type=str,
-        default=None,
-        help="Optional path to compile native .blend scene file using Blender",
-    )
-    blender_parser.add_argument(
-        "--open",
-        action="store_true",
-        help="Automatically open generated scene in Blender 3D interface",
     )
 
     return parser

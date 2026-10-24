@@ -282,12 +282,15 @@ class TrajectoryEngine:
                 t_arr = v.arrival_time
                 s_stop = -v_len / 2.0 - 0.5
 
-                if (
-                    prev_v is not None
-                    and prev_v.id in s_hist
-                    and t_arr in s_hist[prev_v.id]
-                ):
-                    prev_s = s_hist[prev_v.id][t_arr]
+                prev_s = None
+                if prev_v is not None and prev_v.id in s_hist and s_hist[prev_v.id]:
+                    hist = s_hist[prev_v.id]
+                    prev_s = hist.get(t_arr)
+                    if prev_s is None:
+                        past_keys = [k for k in hist if k <= t_arr + 1e-4]
+                        prev_s = hist[max(past_keys)] if past_keys else hist[min(hist)]
+
+                if prev_v is not None and prev_s is not None:
                     prev_type, _ = get_deterministic_vehicle_attributes(prev_v.id)
                     prev_len = VEHICLE_LENGTHS.get(prev_type, 4.4)
                     s_cap_arr = prev_s - (prev_len + v_len) / 2.0 - self.safety_gap
