@@ -42,7 +42,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument(
         "--controller",
-        choices=["fixed-time", "actuated", "max-pressure", "dual-ring"],
+        choices=["fixed-time", "actuated", "max-pressure", "dual-ring", "q-learning"],
         default="fixed-time",
         help="Signal control policy to execute (default: fixed-time)",
     )
@@ -203,7 +203,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     vis_parser.add_argument(
         "--controller",
-        choices=["fixed-time", "actuated", "max-pressure", "dual-ring"],
+        choices=["fixed-time", "actuated", "max-pressure", "dual-ring", "q-learning"],
         default="fixed-time",
         help="Signal control policy to execute (default: fixed-time)",
     )
@@ -247,6 +247,44 @@ def create_parser() -> argparse.ArgumentParser:
         "--open",
         action="store_true",
         help="Automatically open generated visualizer in web browser",
+    )
+
+    train_parser = subparsers.add_parser(
+        "train", help="Train a Q-learning reinforcement learning controller"
+    )
+    train_cfg_group = train_parser.add_mutually_exclusive_group(required=True)
+    train_cfg_group.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        help="Path to scenario JSON configuration file",
+    )
+    train_cfg_group.add_argument(
+        "--preset",
+        "-p",
+        type=str,
+        choices=list_presets(),
+        help="Name of built-in scenario preset to train on",
+    )
+    train_parser.add_argument(
+        "--episodes",
+        "-e",
+        type=int,
+        default=10,
+        help="Number of training episodes (default: 10)",
+    )
+    train_parser.add_argument(
+        "--reward-type",
+        choices=["queue_penalty", "delay_penalty", "throughput"],
+        default="queue_penalty",
+        help="Reward function formulation (default: queue_penalty)",
+    )
+    train_parser.add_argument(
+        "--out-model",
+        "-o",
+        type=str,
+        default=None,
+        help="Destination path to save trained Q-table JSON policy",
     )
 
     return parser

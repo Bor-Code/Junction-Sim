@@ -7,6 +7,7 @@ from junction_sim.controllers.protocol import (
     ControllerDecision,
     SignalController,
 )
+from junction_sim.rl.q_learning import QLearningController
 
 __all__ = [
     "ActuatedController",
@@ -15,5 +16,6 @@ __all__ = [
     "DualRingController",
     "FixedTimeController",
     "MaxPressureController",
+    "QLearningController",
     "SignalController",
 ]

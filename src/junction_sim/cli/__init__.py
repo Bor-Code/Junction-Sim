@@ -6,6 +6,7 @@ from junction_sim.cli.commands import (
     handle_benchmark,
     handle_presets,
     handle_run,
+    handle_train,
     handle_visualize,
 )
 from junction_sim.cli.parser import create_parser
@@ -34,6 +35,8 @@ def main(
             return handle_benchmark(args, stdout=stdout)
         if args.command == "visualize":
             return handle_visualize(args, stdout=stdout)
+        if args.command == "train":
+            return handle_train(args, stdout=stdout)
         return handle_presets(args, stdout=stdout)
     except JunctionSimError as exc:
         stderr.write(f"Error: {exc}\n")
