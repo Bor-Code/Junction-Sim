@@ -154,7 +154,9 @@ class ReservationController(SignalController):
         self._grid = grid if grid is not None else ReservationGrid()
         self._min_green = min_green
         self._phase_ids = tuple(p.id for p in signal_plan.phases)
-        self._last_change_time = 0.0
+        self._elapsed_green = 0.0
+        self._last_time: float | None = None
+        self._was_in_transition = False
         self._request_seq = 0
 
     @property
@@ -163,7 +165,9 @@ class ReservationController(SignalController):
 
     def reset(self) -> None:
         self._grid.clear()
-        self._last_change_time = 0.0
+        self._elapsed_green = 0.0
+        self._last_time = None
+        self._was_in_transition = False
         self._request_seq = 0
 
     def _synthesize_trajectory_cells(
@@ -174,13 +178,25 @@ class ReservationController(SignalController):
         return ((base_x, base_y), ((base_x + 1) % self._grid.cols, base_y))
 
     def decide(self, context: ControllerContext) -> ControllerDecision:
+        if self._last_time is None:
+            dt = 0.0
+        else:
+            dt = max(0.0, context.current_time - self._last_time)
+        self._last_time = context.current_time
+
         if context.is_in_transition:
+            self._was_in_transition = True
             return ControllerDecision(target_phase_id=None, reason="in_transition")
 
         self._grid.clean_expired(context.current_time)
 
-        time_in_phase = context.current_time - self._last_change_time
-        if time_in_phase < self._min_green:
+        if self._was_in_transition:
+            self._elapsed_green = 0.0
+            self._was_in_transition = False
+        else:
+            self._elapsed_green += dt
+
+        if self._elapsed_green < self._min_green:
             return ControllerDecision(target_phase_id=None, reason="min_green_enforced")
 
         candidate_phases: list[tuple[int, str, int]] = []
@@ -215,7 +231,7 @@ class ReservationController(SignalController):
             )
             status = self._grid.request_reservation(req)
             if status == ReservationStatus.GRANTED:
-                self._last_change_time = context.current_time
+                self._elapsed_green = 0.0
                 return ControllerDecision(
                     target_phase_id=pid,
                     reason=f"reservation_granted_{pid}",
