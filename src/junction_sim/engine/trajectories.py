@@ -107,6 +107,10 @@ def compute_bezier_point(
     vx = d0 * (p1[0] - p0[0]) + d1 * (p2[0] - p1[0]) + d2 * (p3[0] - p2[0])
     vy = d0 * (p1[1] - p0[1]) + d1 * (p2[1] - p1[1]) + d2 * (p3[1] - p2[1])
 
+    if abs(vy) < 1e-9:
+        vy = 0.0
+    if abs(vx) < 1e-9:
+        vx = 0.0
     heading = math.atan2(vy, vx)
     return x, y, heading
 

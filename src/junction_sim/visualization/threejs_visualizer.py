@@ -147,6 +147,62 @@ def generate_3d_html_visualizer(
         "      font-size: 1.0rem; font-weight: 700;",
         '      font-family: "JetBrains Mono", monospace; color: #f1f5f9;',
         "    }",
+        "    .signals-monitor {",
+        "      display: flex; gap: 14px; padding: 6px 14px; align-items: center;",
+        "      background: rgba(15, 23, 42, 0.85);",
+        "      border: 1px solid rgba(255, 255, 255, 0.12);",
+        "      border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);",
+        "    }",
+        "    .sig-approach {",
+        "      display: flex; flex-direction: column; gap: 4px; align-items: center;",
+        "    }",
+        "    .sig-title {",
+        "      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em;",
+        "      color: #94a3b8; text-transform: uppercase;",
+        "    }",
+        "    .sig-box {",
+        "      display: flex; align-items: center; gap: 6px; background: #09090b;",
+        "      padding: 5px 10px; border-radius: 999px; border: 1px solid #27272a;",
+        "    }",
+        "    .sig-bulb {",
+        "      width: 14px; height: 14px; border-radius: 50%; opacity: 0.18;",
+        "      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);",
+        "    }",
+        "    .sig-bulb.red { background: #ff0033; }",
+        "    .sig-bulb.yellow { background: #ffaa00; }",
+        "    .sig-bulb.green { background: #00ff66; }",
+        "    .sig-bulb.red.active {",
+        "      opacity: 1; transform: scale(1.22);",
+        "      box-shadow: 0 0 16px #ff0033, 0 0 30px rgba(255, 0, 51, 0.7);",
+        "    }",
+        "    .sig-bulb.yellow.active {",
+        "      opacity: 1; transform: scale(1.22);",
+        "      box-shadow: 0 0 16px #ffaa00, 0 0 30px rgba(255, 170, 0, 0.7);",
+        "    }",
+        "    .sig-bulb.green.active {",
+        "      opacity: 1; transform: scale(1.22);",
+        "      box-shadow: 0 0 16px #00ff66, 0 0 30px rgba(0, 255, 102, 0.7);",
+        "    }",
+        "    .sig-badge {",
+        "      font-size: 0.68rem; font-weight: 800;",
+        '      font-family: "JetBrains Mono", monospace;',
+        "      padding: 2px 7px; border-radius: 6px; letter-spacing: 0.04em;",
+        "    }",
+        "    .badge-red {",
+        "      color: #f87171; background: rgba(239, 68, 68, 0.18);",
+        "      border: 1px solid rgba(239, 68, 68, 0.45);",
+        "    }",
+        "    .badge-yellow {",
+        "      color: #fbbf24; background: rgba(245, 158, 11, 0.18);",
+        "      border: 1px solid rgba(245, 158, 11, 0.45);",
+        "    }",
+        "    .badge-green {",
+        "      color: #4ade80; background: rgba(34, 197, 94, 0.18);",
+        "      border: 1px solid rgba(34, 197, 94, 0.45);",
+        "    }",
+        "    .sig-divider {",
+        "      width: 1px; height: 38px; background: rgba(255, 255, 255, 0.1);",
+        "    }",
         "    .top-right-deck {",
         "      display: flex; flex-direction: column; gap: 10px;",
         "      align-items: flex-end;",
@@ -292,6 +348,33 @@ def generate_3d_html_visualizer(
         '          <span class="metric-value" id="hud-max-queue">0</span>',
         "        </div>",
         "      </div>",
+        '      <div class="glass-card signals-monitor interactive">',
+        '        <div class="sig-approach">',
+        '          <span class="sig-title">North-South (Kuzey-Güney)</span>',
+        '          <div class="sig-box">',
+        '            <span class="sig-bulb red" id="hud-ns-red"></span>',
+        '            <span class="sig-bulb yellow" id="hud-ns-yellow"></span>',
+        '            <span class="sig-bulb green" id="hud-ns-green"></span>',
+        "          </div>",
+        (
+            '          <span class="sig-badge badge-green" '
+            'id="hud-ns-badge">GO (GREEN)</span>'
+        ),
+        "        </div>",
+        '        <div class="sig-divider"></div>',
+        '        <div class="sig-approach">',
+        '          <span class="sig-title">East-West (Doğu-Batı)</span>',
+        '          <div class="sig-box">',
+        '            <span class="sig-bulb red" id="hud-ew-red"></span>',
+        '            <span class="sig-bulb yellow" id="hud-ew-yellow"></span>',
+        '            <span class="sig-bulb green" id="hud-ew-green"></span>',
+        "          </div>",
+        (
+            '          <span class="sig-badge badge-red" '
+            'id="hud-ew-badge">STOP (RED)</span>'
+        ),
+        "        </div>",
+        "      </div>",
         '      <div class="top-right-deck interactive">',
         '        <div class="glass-card cam-modes">',
         (
@@ -419,6 +502,7 @@ def generate_3d_html_visualizer(
     scene.add(sunLight);
 
     const signalMeshes = {};
+    const stopBars = {};
 
     function createSignboardTexture() {
       const cv = document.createElement('canvas');
@@ -579,7 +663,7 @@ def generate_3d_html_visualizer(
         }
       }
 
-      function addStopLine(x, z, width, isHorizontal) {
+      function addStopLine(id, x, z, width, isHorizontal) {
         const line = new THREE.Mesh(
           new THREE.PlaneGeometry(width, 0.75), whiteLineMat
         );
@@ -587,6 +671,18 @@ def generate_3d_html_visualizer(
         if (!isHorizontal) line.rotation.z = Math.PI / 2;
         line.position.set(x, 0.035, z);
         scene.add(line);
+
+        const glowLine = new THREE.Mesh(
+          new THREE.PlaneGeometry(width, 0.5),
+          new THREE.MeshBasicMaterial({ color: 0xef4444 })
+        );
+        glowLine.rotation.x = -Math.PI / 2;
+        if (!isHorizontal) glowLine.rotation.z = Math.PI / 2;
+        const offsetZ = isHorizontal ? (z > 0 ? -0.55 : 0.55) : 0;
+        const offsetX = !isHorizontal ? (x > 0 ? -0.55 : 0.55) : 0;
+        glowLine.position.set(x + offsetX, 0.04, z + offsetZ);
+        scene.add(glowLine);
+        stopBars[id] = glowLine;
       }
 
       function addZebraCrossing(centerX, centerZ, isHorizontal) {
@@ -607,10 +703,10 @@ def generate_3d_html_visualizer(
         }
       }
 
-      addStopLine(3.8, 13, 7.5, true);
-      addStopLine(-3.8, -13, 7.5, true);
-      addStopLine(13, -3.8, 7.5, false);
-      addStopLine(-13, 3.8, 7.5, false);
+      addStopLine('north', 3.8, 13, 7.5, true);
+      addStopLine('south', -3.8, -13, 7.5, true);
+      addStopLine('east', 13, -3.8, 7.5, false);
+      addStopLine('west', -13, 3.8, 7.5, false);
 
       addZebraCrossing(0, 16.5, true);
       addZebraCrossing(0, -16.5, true);
@@ -754,10 +850,10 @@ def generate_3d_html_visualizer(
       siteGroup.add(win3);
 
       const fenceMat = new THREE.MeshStandardMaterial({
-        color: 0xf97316, roughness: 0.7, wireframe: true
+        color: 0x475569, metalness: 0.6, roughness: 0.4
       });
-      const fence = new THREE.Mesh(new THREE.PlaneGeometry(32, 2.2), fenceMat);
-      fence.position.set(4, 1.1, 14);
+      const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.2, 32), fenceMat);
+      fence.position.set(11.5, 1.1, 14);
       fence.rotation.y = Math.PI / 2;
       siteGroup.add(fence);
 
@@ -858,68 +954,111 @@ def generate_3d_html_visualizer(
       const housingMat = new THREE.MeshStandardMaterial({
         color: 0x09090b, roughness: 0.85
       });
+      const borderMat = new THREE.MeshBasicMaterial({
+        color: 0xfacc15
+      });
 
-      const heads = [
-        { id: 'north', x: 9.6, z: 14, rot: 0 },
-        { id: 'south', x: -9.6, z: -14, rot: Math.PI },
-        { id: 'east', x: 14, z: -9.6, rot: Math.PI / 2 },
-        { id: 'west', x: -14, z: 9.6, rot: -Math.PI / 2 }
+      function createHead() {
+        const hGroup = new THREE.Group();
+
+        const backplate = new THREE.Mesh(
+          new THREE.BoxGeometry(1.2, 2.9, 0.08), borderMat
+        );
+        backplate.position.set(0, 0, -0.22);
+        hGroup.add(backplate);
+
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9, 2.6, 0.45), housingMat
+        );
+        box.castShadow = true;
+        hGroup.add(box);
+
+        const visorGeo = new THREE.CylinderGeometry(
+          0.36, 0.36, 0.35, 12, 1, true, 0, Math.PI
+        );
+        const visorMat = new THREE.MeshStandardMaterial({
+          color: 0x09090b, roughness: 0.85, side: THREE.DoubleSide
+        });
+
+        const vR = new THREE.Mesh(visorGeo, visorMat);
+        vR.rotation.x = Math.PI / 2;
+        vR.position.set(0, 0.95, 0.28);
+        hGroup.add(vR);
+
+        const vY = new THREE.Mesh(visorGeo, visorMat);
+        vY.rotation.x = Math.PI / 2;
+        vY.position.set(0, 0.18, 0.28);
+        hGroup.add(vY);
+
+        const vG = new THREE.Mesh(visorGeo, visorMat);
+        vG.rotation.x = Math.PI / 2;
+        vG.position.set(0, -0.58, 0.28);
+        hGroup.add(vG);
+
+        const lensGeo = new THREE.SphereGeometry(0.28, 16, 16);
+        const rMesh = new THREE.Mesh(
+          lensGeo, new THREE.MeshBasicMaterial({ color: 0xff0033 })
+        );
+        rMesh.position.set(0, 0.75, 0.22);
+        hGroup.add(rMesh);
+
+        const yMesh = new THREE.Mesh(
+          lensGeo, new THREE.MeshBasicMaterial({ color: 0x18181b })
+        );
+        yMesh.position.set(0, 0, 0.22);
+        hGroup.add(yMesh);
+
+        const gMesh = new THREE.Mesh(
+          lensGeo, new THREE.MeshBasicMaterial({ color: 0x18181b })
+        );
+        gMesh.position.set(0, -0.75, 0.22);
+        hGroup.add(gMesh);
+
+        return { group: hGroup, red: rMesh, yellow: yMesh, green: gMesh };
+      }
+
+      const configs = [
+        { id: 'north', px: 9.6, pz: 13.5, hx: 2.5, hz: 13.5, rot: 0 },
+        { id: 'south', px: -9.6, pz: -13.5, hx: -2.5, hz: -13.5, rot: Math.PI },
+        { id: 'east', px: 13.5, pz: -9.6, hx: 13.5, hz: -2.5, rot: Math.PI / 2 },
+        { id: 'west', px: -13.5, pz: 9.6, hx: -13.5, hz: 2.5, rot: -Math.PI / 2 }
       ];
 
-      heads.forEach(h => {
+      configs.forEach(cfg => {
         const post = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.18, 0.24, 7.2, 12), steelMat
+          new THREE.CylinderGeometry(0.2, 0.26, 7.5, 12), steelMat
         );
-        post.position.set(h.x, 3.6, h.z);
+        post.position.set(cfg.px, 3.75, cfg.pz);
         post.castShadow = true;
         scene.add(post);
 
+        const armLen = 8.5;
         const arm = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.12, 0.12, 6.8, 12), steelMat
+          new THREE.CylinderGeometry(0.14, 0.14, armLen, 12), steelMat
         );
         arm.rotation.z = Math.PI / 2;
-        arm.rotation.y = h.rot;
-        arm.position.set(h.x, 6.9, h.z);
+        arm.rotation.y = cfg.rot;
+        arm.position.set((cfg.px + cfg.hx) / 2, 6.9, (cfg.pz + cfg.hz) / 2);
         scene.add(arm);
 
-        const box = new THREE.Mesh(
-          new THREE.BoxGeometry(0.65, 1.8, 0.45), housingMat
-        );
-        box.position.set(h.x, 6.7, h.z);
-        box.rotation.y = h.rot;
-        box.castShadow = true;
-        scene.add(box);
+        const headOver = createHead();
+        headOver.group.position.set(cfg.hx, 6.0, cfg.hz);
+        headOver.group.rotation.y = cfg.rot;
+        scene.add(headOver.group);
 
-        const rMat = new THREE.MeshStandardMaterial({
-          color: 0x3b0707, roughness: 0.3
-        });
-        const yMat = new THREE.MeshStandardMaterial({
-          color: 0x3d2900, roughness: 0.3
-        });
-        const gMat = new THREE.MeshStandardMaterial({
-          color: 0x06331a, roughness: 0.3
-        });
+        const headPost = createHead();
+        headPost.group.position.set(cfg.px, 3.5, cfg.pz);
+        headPost.group.rotation.y = cfg.rot;
+        scene.add(headPost.group);
 
-        const lensGeo = new THREE.SphereGeometry(0.18, 16, 16);
-
-        const rMesh = new THREE.Mesh(lensGeo, rMat);
-        rMesh.position.set(0, 0.55, 0.22);
-        box.add(rMesh);
-
-        const yMesh = new THREE.Mesh(lensGeo, yMat);
-        yMesh.position.set(0, 0, 0.22);
-        box.add(yMesh);
-
-        const gMesh = new THREE.Mesh(lensGeo, gMat);
-        gMesh.position.set(0, -0.55, 0.22);
-        box.add(gMesh);
-
-        const pLight = new THREE.PointLight(0x10b981, 0, 22);
-        pLight.position.set(h.x, 6.7, h.z);
+        const pLight = new THREE.PointLight(0x00ff66, 3.0, 32);
+        pLight.position.set(cfg.hx, 6.0, cfg.hz);
         scene.add(pLight);
 
-        signalMeshes[h.id] = {
-          red: rMesh, yellow: yMesh, green: gMesh, light: pLight
+        signalMeshes[cfg.id] = {
+          heads: [headOver, headPost],
+          light: pLight,
+          stopBar: stopBars[cfg.id]
         };
       });
     }
@@ -1242,11 +1381,16 @@ def generate_3d_html_visualizer(
       const s1 = states[idx];
       const alpha = (t - s0.time) / (s1.time - s0.time || 1);
 
+      let dHeading = s1.heading - s0.heading;
+      while (dHeading > Math.PI) dHeading -= Math.PI * 2;
+      while (dHeading < -Math.PI) dHeading += Math.PI * 2;
+      const interpHeading = s0.heading + dHeading * alpha;
+
       return {
         vehicle_id: s0.vehicle_id,
         x: s0.x + (s1.x - s0.x) * alpha,
         y: s0.y + (s1.y - s0.y) * alpha,
-        heading: s0.heading + (s1.heading - s0.heading) * alpha,
+        heading: interpHeading,
         speed: s0.speed + (s1.speed - s0.speed) * alpha,
         acceleration: s0.acceleration,
         steering_angle: s0.steering_angle,
@@ -1334,44 +1478,104 @@ def generate_3d_html_visualizer(
     function updateSignals(step) {
       const activePhase = step.active_phase_id;
       const state = step.signal_state;
+      const isNS = activePhase === 'P1';
+
+      const nsIsGreen = isNS && state === 'green';
+      const nsIsYellow = isNS && state === 'yellow';
+      const nsIsRed = !nsIsGreen && !nsIsYellow;
+
+      const ewIsGreen = !isNS && state === 'green';
+      const ewIsYellow = !isNS && state === 'yellow';
+      const ewIsRed = !ewIsGreen && !ewIsYellow;
+
+      const hudNsRed = document.getElementById('hud-ns-red');
+      const hudNsYel = document.getElementById('hud-ns-yellow');
+      const hudNsGrn = document.getElementById('hud-ns-green');
+      const hudNsBadge = document.getElementById('hud-ns-badge');
+
+      if (hudNsRed) {
+        hudNsRed.className = 'sig-bulb red' + (nsIsRed ? ' active' : '');
+        hudNsYel.className = 'sig-bulb yellow' + (nsIsYellow ? ' active' : '');
+        hudNsGrn.className = 'sig-bulb green' + (nsIsGreen ? ' active' : '');
+        if (nsIsGreen) {
+          hudNsBadge.className = 'sig-badge badge-green';
+          hudNsBadge.textContent = 'GO (GREEN)';
+        } else if (nsIsYellow) {
+          hudNsBadge.className = 'sig-badge badge-yellow';
+          hudNsBadge.textContent = 'CLEARING (YELLOW)';
+        } else {
+          hudNsBadge.className = 'sig-badge badge-red';
+          hudNsBadge.textContent = 'STOP (RED)';
+        }
+      }
+
+      const hudEwRed = document.getElementById('hud-ew-red');
+      const hudEwYel = document.getElementById('hud-ew-yellow');
+      const hudEwGrn = document.getElementById('hud-ew-green');
+      const hudEwBadge = document.getElementById('hud-ew-badge');
+
+      if (hudEwRed) {
+        hudEwRed.className = 'sig-bulb red' + (ewIsRed ? ' active' : '');
+        hudEwYel.className = 'sig-bulb yellow' + (ewIsYellow ? ' active' : '');
+        hudEwGrn.className = 'sig-bulb green' + (ewIsGreen ? ' active' : '');
+        if (ewIsGreen) {
+          hudEwBadge.className = 'sig-badge badge-green';
+          hudEwBadge.textContent = 'GO (GREEN)';
+        } else if (ewIsYellow) {
+          hudEwBadge.className = 'sig-badge badge-yellow';
+          hudEwBadge.textContent = 'CLEARING (YELLOW)';
+        } else {
+          hudEwBadge.className = 'sig-badge badge-red';
+          hudEwBadge.textContent = 'STOP (RED)';
+        }
+      }
 
       const pLed = document.getElementById('phase-led');
       const pLabel = document.getElementById('phase-label');
-      pLabel.textContent = `Phase: ${activePhase} (${state.toUpperCase()})`;
-
-      if (state === 'green') {
-        pLed.style.background = '#10b981';
-        pLed.style.boxShadow = '0 0 10px #10b981';
-      } else if (state === 'yellow') {
-        pLed.style.background = '#f59e0b';
-        pLed.style.boxShadow = '0 0 10px #f59e0b';
-      } else {
-        pLed.style.background = '#ef4444';
-        pLed.style.boxShadow = '0 0 10px #ef4444';
+      if (pLabel) {
+        const dirName = isNS ? 'North-South' : 'East-West';
+        const stName = state.toUpperCase();
+        pLabel.textContent = `Phase: ${activePhase} (${dirName} • ${stName})`;
+      }
+      if (pLed) {
+        const ledCol = state === 'green' ? '#10b981' : (
+          state === 'yellow' ? '#f59e0b' : '#ef4444'
+        );
+        pLed.style.background = ledCol;
+        pLed.style.boxShadow = `0 0 10px ${ledCol}`;
       }
 
-      const isNS = activePhase === 'P1';
       for (const [dir, sm] of Object.entries(signalMeshes)) {
         const isDirNS = (dir === 'north' || dir === 'south');
-        const isDirEW = (dir === 'east' || dir === 'west');
-        const isGreen = (isDirNS && isNS && state === 'green') ||
-                        (isDirEW && !isNS && state === 'green');
-        const isYellow = (isDirNS && isNS && state === 'yellow') ||
-                         (isDirEW && !isNS && state === 'yellow');
+        const isGreen = (isDirNS && nsIsGreen) || (!isDirNS && ewIsGreen);
+        const isYellow = (isDirNS && nsIsYellow) || (!isDirNS && ewIsYellow);
 
-        sm.red.material.color.setHex(isGreen || isYellow ? 0x2b0808 : 0xff1111);
-        sm.yellow.material.color.setHex(isYellow ? 0xf59e0b : 0x2b1d00);
-        sm.green.material.color.setHex(isGreen ? 0x10b981 : 0x032414);
+        const rCol = isGreen || isYellow ? 0x18181b : 0xff0033;
+        const yCol = isYellow ? 0xffaa00 : 0x18181b;
+        const gCol = isGreen ? 0x00ff66 : 0x18181b;
+
+        sm.heads.forEach(h => {
+          h.red.material.color.setHex(rCol);
+          h.yellow.material.color.setHex(yCol);
+          h.green.material.color.setHex(gCol);
+        });
 
         if (isGreen) {
-          sm.light.color.setHex(0x10b981);
-          sm.light.intensity = 1.6;
+          sm.light.color.setHex(0x00ff66);
+          sm.light.intensity = 3.5;
         } else if (isYellow) {
-          sm.light.color.setHex(0xf59e0b);
-          sm.light.intensity = 1.3;
+          sm.light.color.setHex(0xffaa00);
+          sm.light.intensity = 3.0;
         } else {
-          sm.light.color.setHex(0xef4444);
-          sm.light.intensity = 0.9;
+          sm.light.color.setHex(0xff0033);
+          sm.light.intensity = 2.5;
+        }
+
+        if (sm.stopBar) {
+          const barCol = isGreen ? 0x10b981 : (
+            isYellow ? 0xf59e0b : 0xef4444
+          );
+          sm.stopBar.material.color.setHex(barCol);
         }
       }
     }
