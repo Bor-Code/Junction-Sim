@@ -134,6 +134,10 @@ class SimulationEngine:
     def get_queue_length(self, lane_id: str) -> int:
         return self.get_queue(lane_id).length
 
+    def enqueue_vehicle(self, vehicle: Vehicle, lane_id: str) -> None:
+        queue = self.get_queue(lane_id)
+        queue.enqueue(vehicle)
+
     def request_phase_change(self, target_phase_id: str) -> None:
         self._signal_plan.get_phase(target_phase_id)
         if (

@@ -16,6 +16,11 @@ from junction_sim.config.schema import (
 )
 from junction_sim.domain.direction import Direction
 from junction_sim.domain.movement import TurnType
+from junction_sim.domain.network import (
+    IntersectionNetwork,
+    IntersectionNode,
+    RoadLink,
+)
 from junction_sim.exceptions import ConfigurationError
 
 
@@ -583,3 +588,48 @@ def get_preset(name: str) -> ScenarioConfig:
         )
     _, builder = _PRESET_BUILDERS[name]
     return builder()
+
+
+def build_two_junction_corridor_network() -> IntersectionNetwork:
+    sc1 = build_webster_four_way_preset()
+    sc2 = build_webster_four_way_preset()
+    int1, plan1, demands1, _ = sc1.build_scenario()
+    int2, plan2, demands2, _ = sc2.build_scenario()
+
+    node1 = IntersectionNode(
+        id="junc_1",
+        intersection=int1,
+        signal_plan=plan1,
+        demands=demands1,
+    )
+    node2 = IntersectionNode(
+        id="junc_2",
+        intersection=int2,
+        signal_plan=plan2,
+        demands=demands2,
+    )
+
+    link12 = RoadLink(
+        id="link_1_to_2",
+        source_node_id="junc_1",
+        source_movement_id="W_T",
+        target_node_id="junc_2",
+        target_lane_id="lane_e_0",
+        length=200.0,
+        free_flow_speed=13.89,
+    )
+    link21 = RoadLink(
+        id="link_2_to_1",
+        source_node_id="junc_2",
+        source_movement_id="E_T",
+        target_node_id="junc_1",
+        target_lane_id="lane_w_0",
+        length=200.0,
+        free_flow_speed=13.89,
+    )
+
+    return IntersectionNetwork(
+        id="corridor_two_junction",
+        nodes={"junc_1": node1, "junc_2": node2},
+        links=(link12, link21),
+    )

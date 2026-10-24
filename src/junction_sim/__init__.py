@@ -38,6 +38,11 @@ from junction_sim.domain.dual_ring import (
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
+from junction_sim.domain.network import (
+    IntersectionNetwork,
+    IntersectionNode,
+    RoadLink,
+)
 from junction_sim.domain.pedestrian import Pedestrian
 from junction_sim.domain.signal import SignalPhase, SignalPlan
 from junction_sim.domain.validation import (
@@ -54,6 +59,11 @@ from junction_sim.engine.arrival import (
 )
 from junction_sim.engine.clock import SimulationClock
 from junction_sim.engine.engine import SimulationEngine
+from junction_sim.engine.network_engine import (
+    InTransitVehicle,
+    NetworkSimulationEngine,
+    NetworkStepResult,
+)
 from junction_sim.engine.pedestrian_queue import PedestrianQueue
 from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
@@ -86,6 +96,7 @@ from junction_sim.presets import (
     build_arterial_corridor_preset,
     build_bottleneck_spillback_preset,
     build_peak_hour_surge_preset,
+    build_two_junction_corridor_network,
     build_webster_four_way_preset,
     get_preset,
     get_preset_info,
@@ -150,7 +161,10 @@ __all__ = [
     "FixedTimeController",
     "generate_3d_html_visualizer",
     "generate_interactive_html",
+    "InTransitVehicle",
     "Intersection",
+    "IntersectionNetwork",
+    "IntersectionNode",
     "InvalidGeometryError",
     "InvalidSignalPlanError",
     "InvalidStateError",
@@ -166,6 +180,8 @@ __all__ = [
     "MultiSeedBenchmarkResult",
     "MultiSeedMetrics",
     "NEMAPhase",
+    "NetworkSimulationEngine",
+    "NetworkStepResult",
     "OSMData",
     "OSMNode",
     "OSMWay",
@@ -182,6 +198,7 @@ __all__ = [
     "build_nema_eight_phase_structure",
     "build_peak_hour_surge_preset",
     "build_scenario_from_osm",
+    "build_two_junction_corridor_network",
     "build_webster_four_way_preset",
     "get_preset",
     "get_preset_info",
@@ -191,6 +208,7 @@ __all__ = [
     "ReservationController",
     "ReservationGrid",
     "RLController",
+    "RoadLink",
     "render_ascii_intersection",
     "render_queue_bars",
     "render_step_dashboard",

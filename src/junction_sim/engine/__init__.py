@@ -23,6 +23,11 @@ from junction_sim.engine.idm import (
     get_driver_profile,
     step_idm,
 )
+from junction_sim.engine.network_engine import (
+    InTransitVehicle,
+    NetworkSimulationEngine,
+    NetworkStepResult,
+)
 from junction_sim.engine.pedestrian_queue import PedestrianQueue
 from junction_sim.engine.queue import LaneQueue
 from junction_sim.engine.rng import TrafficRNG
@@ -46,8 +51,11 @@ __all__ = [
     "EmissionVehicleCategory",
     "EmissionsResult",
     "IDMParameters",
+    "InTransitVehicle",
     "InstantaneousEmissions",
     "LaneQueue",
+    "NetworkSimulationEngine",
+    "NetworkStepResult",
     "PedestrianArrivalGenerator",
     "PedestrianDemandProfile",
     "PedestrianQueue",

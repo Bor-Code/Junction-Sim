@@ -9,6 +9,11 @@ from junction_sim.domain.dual_ring import (
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.lane import Lane
 from junction_sim.domain.movement import Movement, TurnType
+from junction_sim.domain.network import (
+    IntersectionNetwork,
+    IntersectionNode,
+    RoadLink,
+)
 from junction_sim.domain.pedestrian import Pedestrian
 from junction_sim.domain.signal import SignalPhase, SignalPlan, SignalState
 from junction_sim.domain.validation import (
@@ -23,11 +28,14 @@ __all__ = [
     "Direction",
     "DualRingStructure",
     "Intersection",
+    "IntersectionNetwork",
+    "IntersectionNode",
     "Lane",
     "Movement",
     "NEMAPhase",
     "Pedestrian",
     "PedestrianSignalState",
+    "RoadLink",
     "SignalPhase",
     "SignalPlan",
     "SignalState",
