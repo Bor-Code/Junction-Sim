@@ -849,14 +849,6 @@ def generate_3d_html_visualizer(
       win3.position.set(0, 4.7, 1.6);
       siteGroup.add(win3);
 
-      const fenceMat = new THREE.MeshStandardMaterial({
-        color: 0x475569, metalness: 0.6, roughness: 0.4
-      });
-      const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.2, 32), fenceMat);
-      fence.position.set(11.5, 1.1, 14);
-      fence.rotation.y = Math.PI / 2;
-      siteGroup.add(fence);
-
       const craneGroup = new THREE.Group();
       craneGroup.position.set(-56, 0, -32);
       const craneMat = new THREE.MeshStandardMaterial({
