@@ -31,8 +31,13 @@ A discrete-event traffic simulation, microscopic kinematics engine, and signal b
   - Accumulated fuel consumption (liters) and carbon footprint (kg CO2) reported across benchmark runs.
 - **Reinforcement Learning Signal Control**:
   - Built-in Gymnasium-like `JunctionEnv` with observation quantization and custom reward formulations (`queue_penalty`, `delay_penalty`, `throughput`).
-  - Trainable `QLearningController` with epsilon-decay and policy serialization (`save`/`load`).
-  - Standalone CLI training workflow: `junction-sim train`.
+  - Trainable tabular `QLearningController` and neural `DQNController` (Deep Q-Network with replay buffer and target network).
+  - Standalone CLI training workflow: `junction-sim train --algorithm {q-learning,dqn}`.
+- **Autonomous CAV Space-Time Reservation Grid (AIM)**:
+  - Autonomous intersection management (AIM) using a discrete space-time cell reservation grid.
+  - Conflict-free trajectory reservation for Connected and Autonomous Vehicles (CAVs) with zero wasted inter-phase green times (`--controller reservation`).
+- **OpenStreetMap (OSM) Real-World Importer**:
+  - Direct import from Overpass API JSON exports into fully structured junction geometries and lane connectivity (`junction-sim import --osm`).
 - **Arterial Corridor Coordination (Green Wave)**:
   - Multi-intersection offset optimization: $\theta_i = (d_i / v_{\text{prog}}) \pmod C$.
   - Progression bandwidth calculation ensuring vehicle platoons pass through consecutive green lights unimpeded (`--controller coordinated`).
@@ -69,7 +74,7 @@ When viewing the 3D visualizer in your browser (`visualizer.html`), use the keyb
 
 ## Benchmark Comparison: Controller Performance
 
-Results from a 120-second comparative benchmark on the `arterial_corridor` preset under identical traffic demands:
+### Arterial Corridor (120-Second Progression Benchmark)
 
 | Controller | Served (veh) | Completion % | Avg Delay (s) | Max Queue (veh) | Wasted Green (s) | Fuel Consumed (L) | CO2 Emitted (kg) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -78,7 +83,16 @@ Results from a 120-second comparative benchmark on the `arterial_corridor` prese
 | **max-pressure** | 68 | 88.31% | 3.353 | 9 | 32.0 | 1.5695 L | 3.7542 kg |
 | **coordinated** | 66 | 85.71% | 5.955 | 15 | 50.0 | 1.6144 L | 3.8616 kg |
 
-*Note: Actuated and Max-Pressure controllers achieved a ~44% delay reduction and cut wasted green time by 37% relative to uncoordinated fixed-time control.*
+### Webster Four-Way Multi-Controller Benchmark (100 Seconds)
+
+| Controller | Served (veh) | Completion % | Avg Delay (s) | 95% CI (s) |
+| :--- | :---: | :---: | :---: | :---: |
+| **dqn** | 35 | 60.34% | 7.94 | [7.94, 7.94] |
+| **actuated** | 51 | 87.93% | 8.22 | [8.22, 8.22] |
+| **max-pressure** | 46 | 79.31% | 10.98 | [10.98, 10.98] |
+| **fixed-time** | 50 | 86.21% | 14.76 | [14.76, 14.76] |
+| **q-learning** | 35 | 60.34% | 16.43 | [16.43, 16.43] |
+| **reservation** | 35 | 60.34% | 19.17 | [19.17, 19.17] |
 
 ---
 
@@ -107,40 +121,54 @@ pip install -e ".[dev]"
 Export and launch the photorealistic 3D visualizer in your browser:
 
 ```bash
-junction-sim visualize --preset webster_four_way --controller actuated --duration 60.0 --out-html visualizer.html --open
+junction-sim visualize --preset webster_four_way --controller actuated --duration 60.0 --mode 3d --open
 ```
 
 Or run an arterial corridor with green-wave progression:
 
 ```bash
-junction-sim visualize --preset arterial_corridor --controller coordinated --duration 60.0 --out-html corridor.html --open
+junction-sim visualize --preset arterial_corridor --controller coordinated --duration 60.0 --mode 3d --open
 ```
 
-### 2. Train a Reinforcement Learning Controller
+### 2. Train Reinforcement Learning Controllers (Q-Learning & DQN)
 
-Train a Q-learning agent directly in the simulation environment:
+Train a Deep Q-Network agent directly in the simulation environment:
 
 ```bash
-junction-sim train --preset webster_four_way --episodes 50 --reward-type queue_penalty --out-model trained_agent.json
+junction-sim train --preset webster_four_way --algorithm dqn --episodes 20 --out-model dqn_policy.json
 ```
 
-### 3. Run a Simulation
-
-Execute a single-controller simulation run:
+Or train a tabular Q-learning agent:
 
 ```bash
-junction-sim run --preset webster_four_way --controller q-learning --duration 120.0 --out-csv run.csv --out-json run.json
+junction-sim train --preset webster_four_way --algorithm q-learning --episodes 50 --out-model q_policy.json
 ```
 
-### 4. Benchmark Controllers
+### 3. Run Autonomous CAV Space-Time Reservation Simulation
+
+Execute an autonomous intersection management (AIM) reservation simulation:
+
+```bash
+junction-sim run --preset webster_four_way --controller reservation --duration 100.0 --out-json run_cav.json
+```
+
+### 4. Import Real-World OpenStreetMap Intersections
+
+Generate a ready-to-simulate scenario from an OSM Overpass API export:
+
+```bash
+junction-sim import --osm tests/data/osm_junction.json --node-id 1001 --out imported_scenario.json
+```
+
+### 5. Benchmark Multiple Signal Controllers
 
 Compare multiple control strategies under identical Poisson traffic arrivals:
 
 ```bash
-junction-sim benchmark --preset arterial_corridor --controllers fixed-time,actuated,max-pressure,coordinated --duration 120.0 --out-csv benchmark.csv --out-json benchmark.json
+junction-sim benchmark --preset webster_four_way --controllers fixed-time,actuated,max-pressure,q-learning,dqn,reservation --seeds 42 --duration 100.0 --out-json benchmark.json
 ```
 
-### 5. Inspect and Export Presets
+### 6. Inspect and Export Presets
 
 ```bash
 junction-sim presets list
@@ -176,7 +204,6 @@ engine = SimulationEngine(
 
 results = engine.run(duration=60.0)
 
-# Generate microscopic 3D continuous vehicle trajectories with IDM
 traj_engine = TrajectoryEngine(intersection=intersection, signal_plan=signal_plan)
 trajectories = traj_engine.generate_vehicle_states(results=results, step_size=0.1)
 

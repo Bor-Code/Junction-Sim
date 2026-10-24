@@ -191,6 +191,15 @@ def test_reservation_controller_conflict_rejection() -> None:
     )
     assert ctrl.grid.request_reservation(req_block) == ReservationStatus.GRANTED
 
+    ctx0 = ControllerContext(
+        current_time=0.0,
+        active_phase_id="P1",
+        signal_state=SignalState.GREEN,
+        is_in_transition=False,
+        queue_lengths={},
+    )
+    ctrl.decide(ctx0)
+
     ctx = ControllerContext(
         current_time=20.0,
         active_phase_id="P1",
