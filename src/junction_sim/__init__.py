@@ -89,7 +89,12 @@ from junction_sim.reporting import (
     export_step_results_to_csv,
     export_step_results_to_json,
 )
-from junction_sim.rl import JunctionEnv, RLController
+from junction_sim.rl import (
+    DQNAgent,
+    DQNController,
+    JunctionEnv,
+    RLController,
+)
 from junction_sim.visualization import (
     export_3d_html_visualizer,
     export_interactive_html,
@@ -119,6 +124,8 @@ __all__ = [
     "DemandInterval",
     "DemandProfile",
     "Direction",
+    "DQNAgent",
+    "DQNController",
     "DualRingController",
     "DualRingStructure",
     "export_3d_html_visualizer",

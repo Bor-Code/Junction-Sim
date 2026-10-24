@@ -30,9 +30,12 @@ from junction_sim.reporting.json_reporter import (
     export_step_results_to_json,
 )
 from junction_sim.rl import (
+    DQNAgent,
+    DQNController,
     JunctionEnv,
     QLearningAgent,
     QLearningController,
+    train_dqn,
     train_q_learning,
 )
 from junction_sim.visualization import (
@@ -67,11 +70,21 @@ def instantiate_controller(
         return QLearningController(
             agent=agent, signal_plan=signal_plan, intersection=intersection
         )
+    if name == "dqn":
+        obs_size = (
+            sum(len(app.lanes) for app in intersection.approaches)
+            + len(signal_plan.phases)
+            + 2
+        )
+        dqn_agent = DQNAgent(state_size=obs_size, action_size=len(signal_plan.phases))
+        return DQNController(
+            agent=dqn_agent, signal_plan=signal_plan, intersection=intersection
+        )
     if name in ("coordinated", "green-wave"):
         return CoordinatedSignalController(signal_plan=signal_plan)
     raise ConfigurationError(
         f"unknown controller '{name}', expected one of: "
-        "fixed-time, actuated, max-pressure, dual-ring, q-learning, coordinated"
+        "fixed-time, actuated, max-pressure, dual-ring, q-learning, dqn, coordinated"
     )
 
 
@@ -371,12 +384,29 @@ def handle_train(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     scenario = load_scenario_from_args(args)
     episodes = getattr(args, "episodes", 10)
     reward_type = getattr(args, "reward_type", "queue_penalty")
+    algorithm = getattr(args, "algorithm", "q-learning")
 
     env = JunctionEnv(scenario=scenario, reward_type=reward_type)
-    agent, rewards = train_q_learning(env=env, episodes=episodes)
-
     preset_or_name = getattr(args, "preset", None) or "custom"
     out_model = getattr(args, "out_model", None)
+
+    if algorithm == "dqn":
+        dqn_agent, dqn_rewards = train_dqn(env=env, episodes=episodes)
+        if out_model is not None:
+            dqn_agent.save(out_model)
+
+        stdout.write("Deep Q-Network (DQN) Controller Training Complete\n")
+        stdout.write(f"Scenario:        {preset_or_name}\n")
+        stdout.write(f"Episodes:        {episodes}\n")
+        stdout.write(f"Reward Type:     {reward_type}\n")
+        stdout.write(f"Final Epsilon:   {dqn_agent.epsilon:.4f}\n")
+        avg_reward = sum(dqn_rewards) / len(dqn_rewards) if dqn_rewards else 0.0
+        stdout.write(f"Avg Reward:      {avg_reward:.2f}\n")
+        if out_model is not None:
+            stdout.write(f"Saved Model:     {out_model}\n")
+        return 0
+
+    agent, rewards = train_q_learning(env=env, episodes=episodes)
     if out_model is not None:
         agent.save(out_model)
 

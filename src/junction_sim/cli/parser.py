@@ -48,6 +48,7 @@ def create_parser() -> argparse.ArgumentParser:
             "max-pressure",
             "dual-ring",
             "q-learning",
+            "dqn",
             "coordinated",
         ],
         default="fixed-time",
@@ -216,6 +217,7 @@ def create_parser() -> argparse.ArgumentParser:
             "max-pressure",
             "dual-ring",
             "q-learning",
+            "dqn",
             "coordinated",
         ],
         default="fixed-time",
@@ -264,7 +266,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     train_parser = subparsers.add_parser(
-        "train", help="Train a Q-learning reinforcement learning controller"
+        "train", help="Train a reinforcement learning signal controller"
     )
     train_cfg_group = train_parser.add_mutually_exclusive_group(required=True)
     train_cfg_group.add_argument(
@@ -279,6 +281,13 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         choices=list_presets(),
         help="Name of built-in scenario preset to train on",
+    )
+    train_parser.add_argument(
+        "--algorithm",
+        "-a",
+        choices=["q-learning", "dqn"],
+        default="q-learning",
+        help="Reinforcement learning algorithm to train (default: q-learning)",
     )
     train_parser.add_argument(
         "--episodes",
@@ -298,7 +307,7 @@ def create_parser() -> argparse.ArgumentParser:
         "-o",
         type=str,
         default=None,
-        help="Destination path to save trained Q-table JSON policy",
+        help="Destination path to save trained model JSON policy",
     )
 
     return parser

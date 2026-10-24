@@ -178,7 +178,9 @@ results = engine.run(duration=60.0)
 traj_engine = TrajectoryEngine(intersection=intersection, signal_plan=signal_plan)
 trajectories = traj_engine.generate_vehicle_states(results=results, step_size=0.1)
 
-print(f"Simulated {len(results)} steps and generated {len(trajectories)} 3D trajectory states.")
+print(
+    f"Simulated {len(results)} steps and generated {len(trajectories)} 3D trajectory states."
+)
 ```
 
 ### Computing Fuel & Emissions
