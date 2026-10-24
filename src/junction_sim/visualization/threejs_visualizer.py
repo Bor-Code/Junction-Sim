@@ -216,6 +216,30 @@ def generate_3d_html_visualizer(
         "    .sig-divider {",
         "      width: 1px; height: 38px; background: rgba(255, 255, 255, 0.1);",
         "    }",
+        "    .sig-actions { display: flex; flex-direction: column; gap: 3px; }",
+        "    .sig-btn {",
+        "      background: rgba(255, 255, 255, 0.08);",
+        "      border: 1px solid rgba(255, 255, 255, 0.12);",
+        "      color: var(--text-muted); padding: 2px 7px; border-radius: 5px;",
+        "      font-size: 0.64rem; font-weight: 700; cursor: pointer;",
+        '      font-family: "JetBrains Mono", monospace;',
+        "      transition: all 0.15s ease;",
+        "    }",
+        "    .sig-btn:hover {",
+        "      background: rgba(255, 255, 255, 0.15); color: #fff;",
+        "    }",
+        "    .sig-btn.active {",
+        "      background: rgba(16, 185, 129, 0.25);",
+        "      border-color: rgba(16, 185, 129, 0.5); color: #34d399;",
+        "    }",
+        "    .sig-btn.active-force {",
+        "      background: rgba(245, 158, 11, 0.25);",
+        "      border-color: rgba(245, 158, 11, 0.6); color: #fbbf24;",
+        "    }",
+        "    .sig-approach {",
+        "      cursor: pointer; transition: transform 0.15s ease;",
+        "    }",
+        "    .sig-approach:hover { transform: translateY(-1px); }",
         "    .top-right-deck {",
         "      display: flex; flex-direction: column; gap: 10px;",
         "      align-items: flex-end;",
@@ -453,7 +477,7 @@ def generate_3d_html_visualizer(
         "        </div>",
         "      </div>",
         '      <div class="glass-card signals-monitor interactive">',
-        '        <div class="sig-approach">',
+        '        <div class="sig-approach" id="card-ns" title="Force NS (Key N)">',
         '          <span class="sig-title">North-South (Kuzey-Güney)</span>',
         '          <div class="sig-box">',
         '            <span class="sig-bulb red" id="hud-ns-red"></span>',
@@ -466,7 +490,7 @@ def generate_3d_html_visualizer(
         ),
         "        </div>",
         '        <div class="sig-divider"></div>',
-        '        <div class="sig-approach">',
+        '        <div class="sig-approach" id="card-ew" title="Force EW (Key E)">',
         '          <span class="sig-title">East-West (Doğu-Batı)</span>',
         '          <div class="sig-box">',
         '            <span class="sig-bulb red" id="hud-ew-red"></span>',
@@ -477,6 +501,12 @@ def generate_3d_html_visualizer(
             '          <span class="sig-badge badge-red" '
             'id="hud-ew-badge">STOP (RED)</span>'
         ),
+        "        </div>",
+        '        <div class="sig-divider"></div>',
+        '        <div class="sig-actions">',
+        '          <button class="sig-btn" id="btn-force-ns">Force NS</button>',
+        '          <button class="sig-btn" id="btn-force-ew">Force EW</button>',
+        '          <button class="sig-btn active" id="btn-auto-sig">Auto</button>',
         "        </div>",
         "      </div>",
         '      <div class="top-right-deck interactive">',
@@ -698,6 +728,7 @@ def generate_3d_html_visualizer(
     const stopBars = {};
     const heatmapMeshes = {};
     let heatmapEnabled = false;
+    let manualSignalOverride = null;
 
     function createSignboardTexture() {
       const cv = document.createElement('canvas');
@@ -1533,6 +1564,53 @@ def generate_3d_html_visualizer(
       });
     }
 
+    const btnForceNS = document.getElementById('btn-force-ns');
+    const btnForceEW = document.getElementById('btn-force-ew');
+    const btnAutoSig = document.getElementById('btn-auto-sig');
+    const cardNS = document.getElementById('card-ns');
+    const cardEW = document.getElementById('card-ew');
+
+    function setManualSignal(mode) {
+      manualSignalOverride = mode;
+      if (btnForceNS) {
+        btnForceNS.className = (
+          'sig-btn' + (mode === 'ns' ? ' active-force' : '')
+        );
+      }
+      if (btnForceEW) {
+        btnForceEW.className = (
+          'sig-btn' + (mode === 'ew' ? ' active-force' : '')
+        );
+      }
+      if (btnAutoSig) {
+        btnAutoSig.className = 'sig-btn' + (!mode ? ' active' : '');
+      }
+      let currentStep = steps[0];
+      for (let i = 0; i < steps.length; i++) {
+        if (steps[i].time <= currentTime) currentStep = steps[i];
+        else break;
+      }
+      if (currentStep) {
+        updateSignals(currentStep);
+      }
+    }
+
+    if (btnForceNS) {
+      btnForceNS.addEventListener('click', () => setManualSignal('ns'));
+    }
+    if (btnForceEW) {
+      btnForceEW.addEventListener('click', () => setManualSignal('ew'));
+    }
+    if (btnAutoSig) {
+      btnAutoSig.addEventListener('click', () => setManualSignal(null));
+    }
+    if (cardNS) {
+      cardNS.addEventListener('click', () => setManualSignal('ns'));
+    }
+    if (cardEW) {
+      cardEW.addEventListener('click', () => setManualSignal('ew'));
+    }
+
     function setCameraMode(mode) {
       currentCameraMode = mode;
       document.querySelectorAll('.cam-btn').forEach(b => {
@@ -1763,9 +1841,19 @@ def generate_3d_html_visualizer(
     }
 
     function updateSignals(step) {
-      const activePhase = step.active_phase_id;
-      const state = step.signal_state;
-      const isNS = activePhase === 'P1';
+      let activePhase = step.active_phase_id;
+      let state = step.signal_state;
+      let isNS = activePhase === 'P1';
+
+      if (manualSignalOverride === 'ns') {
+        activePhase = 'P1 (MANUAL)';
+        state = 'green';
+        isNS = true;
+      } else if (manualSignalOverride === 'ew') {
+        activePhase = 'P2 (MANUAL)';
+        state = 'green';
+        isNS = false;
+      }
 
       const nsIsGreen = isNS && state === 'green';
       const nsIsYellow = isNS && state === 'yellow';
@@ -2069,6 +2157,12 @@ def generate_3d_html_visualizer(
         btnReset.click();
       } else if (e.key === 'h' || e.key === 'H') {
         if (btnHeatmap) btnHeatmap.click();
+      } else if (e.key === 'n' || e.key === 'N') {
+        if (btnForceNS) btnForceNS.click();
+      } else if (e.key === 'e' || e.key === 'E') {
+        if (btnForceEW) btnForceEW.click();
+      } else if (e.key === 'a' || e.key === 'A') {
+        if (btnAutoSig) btnAutoSig.click();
       }
     });
 
