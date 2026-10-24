@@ -9,6 +9,11 @@ from junction_sim.domain.direction import Direction
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.movement import TurnType
 from junction_sim.domain.signal import SignalPlan
+from junction_sim.engine.idm import (
+    DriverProfile,
+    compute_idm_acceleration,
+    get_driver_profile,
+)
 from junction_sim.engine.step_result import StepResult
 
 
@@ -49,6 +54,7 @@ class VehicleState3D(BaseModel):
     turn_signal: str = "none"
     vehicle_type: VehicleType = VehicleType.SEDAN
     color: str = "#2563eb"
+    driver_profile: DriverProfile = DriverProfile.NORMAL
 
 
 VEHICLE_COLORS: tuple[str, ...] = (
@@ -256,10 +262,13 @@ class TrajectoryEngine:
             )
 
             s_hist: dict[str, dict[float, float]] = {}
+            spd_hist: dict[str, dict[float, float]] = {}
 
             for v_idx, v in enumerate(v_list):
                 s_hist[v.id] = {}
+                spd_hist[v.id] = {}
                 v_type, color = get_deterministic_vehicle_attributes(v.id)
+                prof, idm_p = get_driver_profile(v.id)
                 v_len = VEHICLE_LENGTHS.get(v_type, 4.4)
                 v_dep = dep_times.get(v.id, max_time + 100.0)
 
@@ -316,6 +325,7 @@ class TrajectoryEngine:
                         continue
 
                     s_stop_lim = s_stop if t < v_dep else 999.0
+                    lead_spd = None
                     if (
                         prev_v is not None
                         and prev_v.id in s_hist
@@ -325,28 +335,34 @@ class TrajectoryEngine:
                         prev_type, _ = get_deterministic_vehicle_attributes(prev_v.id)
                         prev_len = VEHICLE_LENGTHS.get(prev_type, 4.4)
                         s_fol_lim = prev_s - (prev_len + v_len) / 2.0 - self.safety_gap
+                        lead_spd = spd_hist[prev_v.id].get(t, 0.0)
                     else:
                         s_fol_lim = 999.0
 
                     s_cap = min(s_stop_lim, s_fol_lim)
                     avail = max(0.0, s_cap - cur_s)
 
-                    v_max = 8.0 if cur_s < l_transit else 12.5
-                    if avail > 0.05:
-                        target_v = min(v_max, math.sqrt(2.0 * 2.0 * avail))
-                    else:
-                        target_v = 0.0
+                    v_max = 8.0 if cur_s < l_transit else idm_p.v0
+                    lead_s = s_cap if s_cap < 900.0 else None
+                    lead_v = lead_spd if s_fol_lim <= s_stop_lim else 0.0
+                    gap = avail if lead_s is not None else 999.0
 
-                    prev_spd = cur_spd
-                    if target_v > cur_spd:
-                        cur_spd = min(target_v, cur_spd + 2.0 * substep_dt)
-                    else:
-                        cur_spd = max(target_v, cur_spd - 2.5 * substep_dt)
-
+                    eff_p = (
+                        idm_p
+                        if v_max >= idm_p.v0
+                        else idm_p.model_copy(update={"v0": v_max})
+                    )
+                    acc = compute_idm_acceleration(
+                        current_speed=cur_spd,
+                        lead_speed=lead_v if lead_s is not None else None,
+                        gap=gap,
+                        params=eff_p,
+                    )
+                    cur_spd = max(0.0, cur_spd + acc * substep_dt)
                     cur_s = min(s_cap, cur_s + cur_spd * substep_dt)
                     s_hist[v.id][t] = cur_s
+                    spd_hist[v.id][t] = cur_spd
 
-                    acc = (cur_spd - prev_spd) / substep_dt
                     brk = (cur_spd < 0.1 and cur_s <= 0.0) or (acc < -0.8)
 
                     steer = 0.0
@@ -388,6 +404,7 @@ class TrajectoryEngine:
                             turn_signal=sig,
                             vehicle_type=v_type,
                             color=color,
+                            driver_profile=prof,
                         )
                     )
 
