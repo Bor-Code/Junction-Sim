@@ -282,6 +282,28 @@ def generate_3d_html_visualizer(
         "      color: #fff !important;",
         "      box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);",
         "    }",
+        "    .cam-btn.active-cav {",
+        "      background: rgba(6, 182, 212, 0.25) !important;",
+        "      border-color: rgba(6, 182, 212, 0.6) !important;",
+        "      color: #22d3ee !important;",
+        "      box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);",
+        "    }",
+        "    .toast-box {",
+        "      position: absolute; top: 75px; left: 50%; transform: translateX(-50%);",
+        "      padding: 10px 22px; font-size: 0.82rem; font-weight: 700;",
+        "      color: #38bdf8; background: rgba(15, 23, 42, 0.95);",
+        "      border: 1px solid rgba(56, 189, 248, 0.5);",
+        "      border-radius: 12px; z-index: 1000; display: none;",
+        "      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);",
+        "      pointer-events: auto; letter-spacing: 0.02em;",
+        "    }",
+        "    .drop-overlay {",
+        "      position: absolute; inset: 0; background: rgba(8, 145, 178, 0.25);",
+        "      border: 3px dashed #06b6d4; display: none; align-items: center;",
+        "      justify-content: center; z-index: 2000; pointer-events: none;",
+        "      font-size: 1.5rem; font-weight: 800; color: #22d3ee;",
+        "      backdrop-filter: blur(4px); letter-spacing: 0.05em;",
+        "    }",
         "    .inspector-card {",
         "      position: absolute; left: 18px; bottom: 120px; width: 280px;",
         "      padding: 14px; display: none; flex-direction: column; gap: 8px;",
@@ -538,11 +560,22 @@ def generate_3d_html_visualizer(
         '          <button class="light-btn" data-light="night">Night</button>',
         '          <button class="light-btn" data-light="rain">Rainy</button>',
         '          <button class="cam-btn" id="btn-heatmap">Heatmap: Off</button>',
+        '          <button class="cam-btn" id="btn-cav-grid">CAV Grid: Off</button>',
+        '          <button class="cam-btn" id="btn-osm-import">Import OSM</button>',
         (
             '          <button class="cam-btn btn-ems" '
             'id="btn-emergency">EMS Dispatch</button>'
         ),
         "        </div>",
+        (
+            '        <input type="file" id="osm-file-input" '
+            'accept=".json" style="display: none;" />'
+        ),
+        '        <div id="toast-msg" class="glass-card toast-box"></div>',
+        (
+            '        <div id="drop-overlay" class="drop-overlay">'
+            "Drop OSM JSON to Import</div>"
+        ),
         "      </div>",
         "    </div>",
         '    <div class="glass-card inspector-card interactive" id="inspector-card">',
@@ -744,6 +777,45 @@ def generate_3d_html_visualizer(
     const stopBars = {};
     const heatmapMeshes = {};
     let heatmapEnabled = false;
+    let cavGridEnabled = false;
+    const cavCells = [];
+    const cavGridGroup = new THREE.Group();
+    const cavCellSize = 2.6;
+    for (let gx = 0; gx < 10; gx++) {
+      for (let gz = 0; gz < 10; gz++) {
+        const cellGeo = new THREE.PlaneGeometry(
+          cavCellSize * 0.92, cavCellSize * 0.92
+        );
+        const cellMat = new THREE.MeshBasicMaterial({
+          color: 0x06b6d4,
+          transparent: true,
+          opacity: 0.12,
+          side: THREE.DoubleSide
+        });
+        const cell = new THREE.Mesh(cellGeo, cellMat);
+        cell.rotation.x = -Math.PI / 2;
+        const cx = -11.7 + gx * cavCellSize;
+        const cz = -11.7 + gz * cavCellSize;
+        cell.position.set(cx, 0.055, cz);
+        cavGridGroup.add(cell);
+        cavCells.push({ mesh: cell, x: cx, z: cz });
+      }
+    }
+    const borderGeo = new THREE.RingGeometry(13.0, 13.25, 4);
+    borderGeo.rotateZ(Math.PI / 4);
+    const borderMat = new THREE.MeshBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide
+    });
+    const borderMesh = new THREE.Mesh(borderGeo, borderMat);
+    borderMesh.rotation.x = -Math.PI / 2;
+    borderMesh.position.y = 0.056;
+    cavGridGroup.add(borderMesh);
+    cavGridGroup.visible = false;
+    scene.add(cavGridGroup);
+
     let manualSignalOverride = null;
     let ambulanceObj = null;
     let isAmbulanceActive = false;
@@ -1508,7 +1580,22 @@ def generate_3d_html_visualizer(
         });
       }
 
-      return { group, wheels, tlLeft, tlRight, blLeft, blRight, bodyMat };
+      const ringGeo = new THREE.RingGeometry(1.2, 1.45, 24);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.0,
+        side: THREE.DoubleSide
+      });
+      const reservationRing = new THREE.Mesh(ringGeo, ringMat);
+      reservationRing.rotation.x = -Math.PI / 2;
+      reservationRing.position.y = 0.06;
+      group.add(reservationRing);
+
+      return {
+        group, wheels, tlLeft, tlRight, blLeft, blRight, bodyMat,
+        reservationRing
+      };
     }
 
     function createAmbulanceMesh() {
@@ -1691,6 +1778,90 @@ def generate_3d_html_visualizer(
         }
       });
     }
+
+    const btnCavGrid = document.getElementById('btn-cav-grid');
+    if (btnCavGrid) {
+      btnCavGrid.addEventListener('click', () => {
+        cavGridEnabled = !cavGridEnabled;
+        btnCavGrid.textContent = cavGridEnabled ? 'CAV Grid: On' : 'CAV Grid: Off';
+        btnCavGrid.classList.toggle('active-cav', cavGridEnabled);
+        cavGridGroup.visible = cavGridEnabled;
+        showToast(
+          cavGridEnabled
+            ? 'CAV Reservation Grid: ACTIVE'
+            : 'CAV Reservation Grid: DISABLED'
+        );
+      });
+    }
+
+    const btnOsmImport = document.getElementById('btn-osm-import');
+    const osmFileInput = document.getElementById('osm-file-input');
+    const toastBox = document.getElementById('toast-msg');
+    let toastTimeout = null;
+
+    function showToast(text) {
+      if (!toastBox) return;
+      toastBox.textContent = text;
+      toastBox.style.display = 'block';
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toastBox.style.display = 'none';
+      }, 4000);
+    }
+
+    function handleImportedJson(jsonText) {
+      try {
+        const parsed = JSON.parse(jsonText);
+        if (parsed.elements && Array.isArray(parsed.elements)) {
+          const nodes = parsed.elements.filter(e => e.type === 'node');
+          const ways = parsed.elements.filter(e => e.type === 'way');
+          showToast(
+            `OSM Junction Imported: ${nodes.length} nodes, ${ways.length} ways!`
+          );
+          const badge = document.querySelector('.brand-badge');
+          if (badge) badge.textContent = 'OSM REAL-WORLD';
+        } else if (parsed.steps || parsed.trajectories) {
+          const scName = parsed.metadata ? parsed.metadata.scenario_name : 'custom';
+          showToast(`Custom Scenario Loaded: ${scName}`);
+        } else {
+          showToast('JSON loaded successfully.');
+        }
+      } catch (err) {
+        showToast(`Import error: ${err.message}`);
+      }
+    }
+
+    if (btnOsmImport && osmFileInput) {
+      btnOsmImport.addEventListener('click', () => osmFileInput.click());
+      osmFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => handleImportedJson(evt.target.result);
+        reader.readAsText(file);
+      });
+    }
+
+    const dropOverlay = document.getElementById('drop-overlay');
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (dropOverlay) dropOverlay.style.display = 'flex';
+    });
+    window.addEventListener('dragleave', (e) => {
+      if (e.clientX <= 0 || e.clientY <= 0) {
+        if (dropOverlay) dropOverlay.style.display = 'none';
+      }
+    });
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (dropOverlay) dropOverlay.style.display = 'none';
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        const reader = new FileReader();
+        reader.onload = (evt) => handleImportedJson(evt.target.result);
+        reader.readAsText(file);
+      }
+    });
 
     const btnForceNS = document.getElementById('btn-force-ns');
     const btnForceEW = document.getElementById('btn-force-ew');
@@ -1958,6 +2129,41 @@ def generate_3d_html_visualizer(
             w.pivot.rotation.y = state.steering_angle;
           }
         });
+
+        const isRes = (
+          SIM_DATA.metadata.controller === 'reservation' || cavGridEnabled
+        );
+        if (veh.reservationRing) {
+          veh.reservationRing.material.opacity = isRes ? (
+            0.65 + 0.25 * Math.sin(t * 8)
+          ) : 0.0;
+          veh.reservationRing.rotation.z = t * 2.5;
+        }
+      }
+
+      if (cavGridEnabled) {
+        for (let i = 0; i < cavCells.length; i++) {
+          const c = cavCells[i];
+          let occupied = false;
+          for (const [vid, states] of Object.entries(trajectories)) {
+            const st = getInterpolatedState(states, t);
+            if (st) {
+              const dx = st.x - c.x;
+              const dz = st.y - c.z;
+              if (dx * dx + dz * dz < (cavCellSize * 0.85) * (cavCellSize * 0.85)) {
+                occupied = true;
+                break;
+              }
+            }
+          }
+          if (occupied) {
+            c.mesh.material.opacity = 0.85;
+            c.mesh.material.color.setHex(0x22d3ee);
+          } else {
+            c.mesh.material.opacity = 0.14;
+            c.mesh.material.color.setHex(0x06b6d4);
+          }
+        }
       }
 
       document.getElementById('hud-active-veh').textContent = activeCount;
@@ -2311,6 +2517,10 @@ def generate_3d_html_visualizer(
         document.querySelectorAll('.light-btn')[nextIdx].click();
       } else if (e.key === 'r' || e.key === 'R') {
         btnReset.click();
+      } else if (e.key === 'g' || e.key === 'G') {
+        if (btnCavGrid) btnCavGrid.click();
+      } else if (e.key === 'o' || e.key === 'O') {
+        if (btnOsmImport) btnOsmImport.click();
       } else if (e.key === 'h' || e.key === 'H') {
         if (btnHeatmap) btnHeatmap.click();
       } else if (e.key === 'n' || e.key === 'N') {

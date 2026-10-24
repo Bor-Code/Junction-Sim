@@ -148,6 +148,10 @@ def test_generate_3d_html_visualizer_with_trajectories() -> None:
     assert "cam-modes" in html
     assert "lighting-modes" in html
     assert "inspector-card" in html
+    assert "btn-cav-grid" in html
+    assert "btn-osm-import" in html
+    assert "toast-msg" in html
+    assert "drop-overlay" in html
 
 
 def test_export_3d_html_visualizer_to_file(tmp_path: Path) -> None:
