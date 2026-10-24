@@ -42,7 +42,14 @@ def create_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument(
         "--controller",
-        choices=["fixed-time", "actuated", "max-pressure", "dual-ring", "q-learning"],
+        choices=[
+            "fixed-time",
+            "actuated",
+            "max-pressure",
+            "dual-ring",
+            "q-learning",
+            "coordinated",
+        ],
         default="fixed-time",
         help="Signal control policy to execute (default: fixed-time)",
     )
@@ -203,7 +210,14 @@ def create_parser() -> argparse.ArgumentParser:
     )
     vis_parser.add_argument(
         "--controller",
-        choices=["fixed-time", "actuated", "max-pressure", "dual-ring", "q-learning"],
+        choices=[
+            "fixed-time",
+            "actuated",
+            "max-pressure",
+            "dual-ring",
+            "q-learning",
+            "coordinated",
+        ],
         default="fixed-time",
         help="Signal control policy to execute (default: fixed-time)",
     )
