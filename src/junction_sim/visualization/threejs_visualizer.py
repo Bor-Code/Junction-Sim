@@ -270,6 +270,18 @@ def generate_3d_html_visualizer(
         "      color: #f87171 !important;",
         "      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);",
         "    }",
+        "    .btn-ems {",
+        "      border-color: rgba(239, 68, 68, 0.4) !important;",
+        "      color: #f87171 !important;",
+        "    }",
+        "    .btn-ems:hover {",
+        "      background: rgba(239, 68, 68, 0.2) !important;",
+        "    }",
+        "    .btn-ems.active-ems {",
+        "      background: rgba(239, 68, 68, 0.4) !important;",
+        "      color: #fff !important;",
+        "      box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);",
+        "    }",
         "    .inspector-card {",
         "      position: absolute; left: 18px; bottom: 120px; width: 280px;",
         "      padding: 14px; display: none; flex-direction: column; gap: 8px;",
@@ -526,6 +538,10 @@ def generate_3d_html_visualizer(
         '          <button class="light-btn" data-light="night">Night</button>',
         '          <button class="light-btn" data-light="rain">Rainy</button>',
         '          <button class="cam-btn" id="btn-heatmap">Heatmap: Off</button>',
+        (
+            '          <button class="cam-btn btn-ems" '
+            'id="btn-emergency">EMS Dispatch</button>'
+        ),
         "        </div>",
         "      </div>",
         "    </div>",
@@ -729,6 +745,13 @@ def generate_3d_html_visualizer(
     const heatmapMeshes = {};
     let heatmapEnabled = false;
     let manualSignalOverride = null;
+    let ambulanceObj = null;
+    let isAmbulanceActive = false;
+    const ambulanceState = {
+      x: 3.8, y: 95, speed: 18.0, heading: Math.PI,
+      steering_angle: 0, acceleration: 2.2, brake_light: false,
+      turn_signal: 'none', vehicle_id: 'EMS_911', vehicle_type: 'ambulance'
+    };
 
     function createSignboardTexture() {
       const cv = document.createElement('canvas');
@@ -1488,6 +1511,111 @@ def generate_3d_html_visualizer(
       return { group, wheels, tlLeft, tlRight, blLeft, blRight, bodyMat };
     }
 
+    function createAmbulanceMesh() {
+      const group = new THREE.Group();
+      const whiteMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 0.25, metalness: 0.1
+      });
+      const yellowMat = new THREE.MeshStandardMaterial({
+        color: 0xfacc15, roughness: 0.35, metalness: 0.1
+      });
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x020617, roughness: 0.05, metalness: 0.95
+      });
+      const rubberMat = new THREE.MeshStandardMaterial({
+        color: 0x09090b, roughness: 0.95
+      });
+      const chromeMat = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc, metalness: 0.95, roughness: 0.08
+      });
+
+      const cab = new THREE.Mesh(
+        new THREE.BoxGeometry(2.1, 1.8, 2.6), whiteMat
+      );
+      cab.position.set(0, 1.15, 1.3);
+      cab.castShadow = true;
+      group.add(cab);
+
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(2.3, 2.3, 3.8), whiteMat
+      );
+      box.position.set(0, 1.45, -1.2);
+      box.castShadow = true;
+      group.add(box);
+
+      const stripeL = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.45, 3.75), yellowMat
+      );
+      stripeL.position.set(-1.16, 1.45, -1.2);
+      group.add(stripeL);
+
+      const stripeR = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.45, 3.75), yellowMat
+      );
+      stripeR.position.set(1.16, 1.45, -1.2);
+      group.add(stripeR);
+
+      const windShield = new THREE.Mesh(
+        new THREE.BoxGeometry(1.9, 0.7, 0.1), glassMat
+      );
+      windShield.position.set(0, 1.5, 2.56);
+      windShield.rotation.x = -0.25;
+      group.add(windShield);
+
+      const barHousing = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, 0.18, 0.4),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 })
+      );
+      barHousing.position.set(0, 2.15, 1.3);
+      group.add(barHousing);
+
+      const bRedGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.22, 10);
+      const bRedMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+      const bRedMesh = new THREE.Mesh(bRedGeo, bRedMat);
+      bRedMesh.position.set(-0.55, 2.3, 1.3);
+      group.add(bRedMesh);
+
+      const beaconRed = new THREE.PointLight(0xff0033, 4.0, 45);
+      beaconRed.position.set(-0.55, 2.35, 1.3);
+      group.add(beaconRed);
+
+      const bBlueGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.22, 10);
+      const bBlueMat = new THREE.MeshBasicMaterial({ color: 0x0066ff });
+      const bBlueMesh = new THREE.Mesh(bBlueGeo, bBlueMat);
+      bBlueMesh.position.set(0.55, 2.3, 1.3);
+      group.add(bBlueMesh);
+
+      const beaconBlue = new THREE.PointLight(0x0066ff, 4.0, 45);
+      beaconBlue.position.set(0.55, 2.35, 1.3);
+      group.add(beaconBlue);
+
+      const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.28, 14);
+      wheelGeo.rotateZ(Math.PI / 2);
+      const wheels = [];
+
+      [-1, 1].forEach(side => {
+        [1.3, -1.5].forEach((zPos, idx) => {
+          const wPivot = new THREE.Group();
+          wPivot.position.set(side * 1.05, 0.42, zPos);
+          const wMesh = new THREE.Mesh(wheelGeo, rubberMat);
+          wMesh.castShadow = true;
+          const rimGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.29, 12);
+          rimGeo.rotateZ(Math.PI / 2);
+          const rimMesh = new THREE.Mesh(rimGeo, chromeMat);
+          wMesh.add(rimMesh);
+          wPivot.add(wMesh);
+          group.add(wPivot);
+          wheels.push({ pivot: wPivot, mesh: wMesh, canSteer: (idx === 0) });
+        });
+      });
+
+      group.userData = { vehicleId: 'EMS_911' };
+      group.visible = false;
+      scene.add(group);
+
+      return { group, beaconRed, beaconBlue, wheels, bRedMesh, bBlueMesh };
+    }
+
     const trajectories = SIM_DATA.trajectories || {};
     const steps = SIM_DATA.steps || [];
     const maxDuration = SIM_DATA.metadata.duration || 60.0;
@@ -1609,6 +1737,34 @@ def generate_3d_html_visualizer(
     }
     if (cardEW) {
       cardEW.addEventListener('click', () => setManualSignal('ew'));
+    }
+
+    const btnEmergency = document.getElementById('btn-emergency');
+    function dispatchAmbulance() {
+      if (!ambulanceObj) {
+        ambulanceObj = createAmbulanceMesh();
+      }
+      isAmbulanceActive = true;
+      ambulanceState.y = 95;
+      ambulanceObj.group.position.set(ambulanceState.x, 0, ambulanceState.y);
+      ambulanceObj.group.rotation.y = 0;
+      ambulanceObj.group.visible = true;
+
+      setManualSignal('ns');
+      const pLabel = document.getElementById('phase-label');
+      if (pLabel) {
+        pLabel.textContent = 'EMS PREEMPTION: AMBULANCE RUSH (GREEN)';
+      }
+
+      if (btnEmergency) {
+        btnEmergency.classList.add('active-ems');
+        btnEmergency.textContent = 'EMS Inbound!';
+      }
+      selectedVehicleId = 'EMS_911';
+    }
+
+    if (btnEmergency) {
+      btnEmergency.addEventListener('click', dispatchAmbulance);
     }
 
     function setCameraMode(mode) {
@@ -2163,6 +2319,8 @@ def generate_3d_html_visualizer(
         if (btnForceEW) btnForceEW.click();
       } else if (e.key === 'a' || e.key === 'A') {
         if (btnAutoSig) btnAutoSig.click();
+      } else if (e.key === 'x' || e.key === 'X') {
+        if (btnEmergency) btnEmergency.click();
       }
     });
 
@@ -2184,6 +2342,47 @@ def generate_3d_html_visualizer(
           }
         }
         updateSimulation(currentTime);
+      }
+
+      if (isAmbulanceActive && ambulanceObj) {
+        ambulanceState.y -= dt * ambulanceState.speed * playbackSpeed;
+        ambulanceObj.group.position.set(
+          ambulanceState.x, 0, ambulanceState.y
+        );
+
+        const strobe = Math.sin(now * 0.024) > 0;
+        ambulanceObj.beaconRed.intensity = strobe ? 6.0 : 0.2;
+        ambulanceObj.bRedMesh.material.color.setHex(
+          strobe ? 0xff0033 : 0x550011
+        );
+        ambulanceObj.beaconBlue.intensity = !strobe ? 6.0 : 0.2;
+        ambulanceObj.bBlueMesh.material.color.setHex(
+          !strobe ? 0x0066ff : 0x001155
+        );
+
+        ambulanceObj.wheels.forEach(w => {
+          w.mesh.rotation.x += ambulanceState.speed * 0.04;
+        });
+
+        if (selectedVehicleId === 'EMS_911') {
+          updateInspector(ambulanceState);
+          const telDeck = document.getElementById('telemetry-deck');
+          if (telDeck) {
+            telDeck.style.display = 'flex';
+            updateTelemetryDeck(ambulanceState);
+          }
+          updateFollowCamera(ambulanceState);
+        }
+
+        if (ambulanceState.y < -95) {
+          isAmbulanceActive = false;
+          ambulanceObj.group.visible = false;
+          if (btnEmergency) {
+            btnEmergency.classList.remove('active-ems');
+            btnEmergency.textContent = 'EMS Dispatch';
+          }
+          setManualSignal(null);
+        }
       }
 
       if (rainMesh && rainMesh.visible) {
