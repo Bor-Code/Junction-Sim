@@ -85,6 +85,8 @@ def export_benchmark_to_csv(
         "max_queue_veh",
         "phase_switch_count",
         "wasted_green_time_s",
+        "fuel_consumed_liters",
+        "co2_emitted_kg",
     ]
 
     rows: list[dict[str, object]] = []
@@ -101,6 +103,8 @@ def export_benchmark_to_csv(
                 "max_queue_veh": m.max_queue,
                 "phase_switch_count": m.phase_switch_count,
                 "wasted_green_time_s": f"{m.wasted_green_time:.3f}",
+                "fuel_consumed_liters": f"{m.fuel_consumed_liters:.4f}",
+                "co2_emitted_kg": f"{m.co2_emitted_kg:.4f}",
             }
         )
 
@@ -142,6 +146,8 @@ def export_multi_seed_benchmark_to_csv(
         "mean_completion_rate_pct",
         "mean_max_queue_veh",
         "mean_wasted_green_s",
+        "mean_fuel_consumed_liters",
+        "mean_co2_emitted_kg",
     ]
 
     rows: list[dict[str, object]] = []
@@ -159,6 +165,8 @@ def export_multi_seed_benchmark_to_csv(
                 "mean_completion_rate_pct": f"{m.mean_completion_rate:.2f}",
                 "mean_max_queue_veh": f"{m.mean_max_queue:.2f}",
                 "mean_wasted_green_s": f"{m.mean_wasted_green:.3f}",
+                "mean_fuel_consumed_liters": f"{m.mean_fuel_consumed:.4f}",
+                "mean_co2_emitted_kg": f"{m.mean_co2_emitted:.4f}",
             }
         )
 
