@@ -1,4 +1,4 @@
-# junction-sim
+# JUNCTION-SIM
 
 A discrete-event traffic simulation, microscopic kinematics engine, and signal benchmarking platform for signalized intersections.
 
