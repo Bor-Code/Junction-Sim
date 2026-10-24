@@ -4,6 +4,7 @@ from typing import TextIO
 
 from junction_sim.cli.commands import (
     handle_benchmark,
+    handle_import,
     handle_presets,
     handle_run,
     handle_train,
@@ -37,6 +38,8 @@ def main(
             return handle_visualize(args, stdout=stdout)
         if args.command == "train":
             return handle_train(args, stdout=stdout)
+        if args.command == "import":
+            return handle_import(args, stdout=stdout)
         return handle_presets(args, stdout=stdout)
     except JunctionSimError as exc:
         stderr.write(f"Error: {exc}\n")

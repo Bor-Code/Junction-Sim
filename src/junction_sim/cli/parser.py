@@ -48,6 +48,7 @@ def create_parser() -> argparse.ArgumentParser:
             "max-pressure",
             "dual-ring",
             "q-learning",
+            "dqn",
             "reservation",
             "coordinated",
         ],
@@ -217,6 +218,7 @@ def create_parser() -> argparse.ArgumentParser:
             "max-pressure",
             "dual-ring",
             "q-learning",
+            "dqn",
             "reservation",
             "coordinated",
         ],
@@ -266,7 +268,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     train_parser = subparsers.add_parser(
-        "train", help="Train a Q-learning reinforcement learning controller"
+        "train", help="Train a reinforcement learning signal controller"
     )
     train_cfg_group = train_parser.add_mutually_exclusive_group(required=True)
     train_cfg_group.add_argument(
@@ -281,6 +283,13 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         choices=list_presets(),
         help="Name of built-in scenario preset to train on",
+    )
+    train_parser.add_argument(
+        "--algorithm",
+        "-a",
+        choices=["q-learning", "dqn"],
+        default="q-learning",
+        help="Reinforcement learning algorithm to train (default: q-learning)",
     )
     train_parser.add_argument(
         "--episodes",
@@ -300,7 +309,37 @@ def create_parser() -> argparse.ArgumentParser:
         "-o",
         type=str,
         default=None,
-        help="Destination path to save trained Q-table JSON policy",
+        help="Destination path to save trained model JSON policy",
+    )
+
+    import_parser = subparsers.add_parser(
+        "import",
+        help="Import an intersection from external map data (OpenStreetMap)",
+    )
+    import_parser.add_argument(
+        "--osm",
+        required=True,
+        type=str,
+        help="Path to OpenStreetMap Overpass JSON export file",
+    )
+    import_parser.add_argument(
+        "--node-id",
+        required=True,
+        type=int,
+        help="Center OSM node ID representing the junction",
+    )
+    import_parser.add_argument(
+        "--junction-id",
+        type=str,
+        default="osm_junction",
+        help="Identifier for the generated intersection (default: osm_junction)",
+    )
+    import_parser.add_argument(
+        "--out",
+        "-o",
+        type=str,
+        default=None,
+        help="Destination path to save the generated scenario JSON",
     )
 
     return parser

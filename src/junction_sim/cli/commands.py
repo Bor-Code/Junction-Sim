@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 import webbrowser
 from pathlib import Path
@@ -19,6 +20,7 @@ from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.engine.engine import SimulationEngine
 from junction_sim.exceptions import ConfigurationError
+from junction_sim.importers.osm import build_scenario_from_osm, parse_osm_json
 from junction_sim.presets import get_preset, list_presets_info
 from junction_sim.reporting.csv_reporter import (
     export_benchmark_to_csv,
@@ -31,9 +33,12 @@ from junction_sim.reporting.json_reporter import (
     export_step_results_to_json,
 )
 from junction_sim.rl import (
+    DQNAgent,
+    DQNController,
     JunctionEnv,
     QLearningAgent,
     QLearningController,
+    train_dqn,
     train_q_learning,
 )
 from junction_sim.visualization import (
@@ -68,6 +73,16 @@ def instantiate_controller(
         return QLearningController(
             agent=agent, signal_plan=signal_plan, intersection=intersection
         )
+    if name == "dqn":
+        obs_size = (
+            sum(len(app.lanes) for app in intersection.approaches)
+            + len(signal_plan.phases)
+            + 2
+        )
+        dqn_agent = DQNAgent(state_size=obs_size, action_size=len(signal_plan.phases))
+        return DQNController(
+            agent=dqn_agent, signal_plan=signal_plan, intersection=intersection
+        )
     if name in ("coordinated", "green-wave"):
         return CoordinatedSignalController(signal_plan=signal_plan)
     if name == "reservation":
@@ -75,7 +90,7 @@ def instantiate_controller(
     raise ConfigurationError(
         f"unknown controller '{name}', expected one of: "
         "fixed-time, actuated, max-pressure, dual-ring, "
-        "q-learning, reservation, coordinated"
+        "q-learning, dqn, reservation, coordinated"
     )
 
 
@@ -375,12 +390,29 @@ def handle_train(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     scenario = load_scenario_from_args(args)
     episodes = getattr(args, "episodes", 10)
     reward_type = getattr(args, "reward_type", "queue_penalty")
+    algorithm = getattr(args, "algorithm", "q-learning")
 
     env = JunctionEnv(scenario=scenario, reward_type=reward_type)
-    agent, rewards = train_q_learning(env=env, episodes=episodes)
-
     preset_or_name = getattr(args, "preset", None) or "custom"
     out_model = getattr(args, "out_model", None)
+
+    if algorithm == "dqn":
+        dqn_agent, dqn_rewards = train_dqn(env=env, episodes=episodes)
+        if out_model is not None:
+            dqn_agent.save(out_model)
+
+        stdout.write("Deep Q-Network (DQN) Controller Training Complete\n")
+        stdout.write(f"Scenario:        {preset_or_name}\n")
+        stdout.write(f"Episodes:        {episodes}\n")
+        stdout.write(f"Reward Type:     {reward_type}\n")
+        stdout.write(f"Final Epsilon:   {dqn_agent.epsilon:.4f}\n")
+        avg_reward = sum(dqn_rewards) / len(dqn_rewards) if dqn_rewards else 0.0
+        stdout.write(f"Avg Reward:      {avg_reward:.2f}\n")
+        if out_model is not None:
+            stdout.write(f"Saved Model:     {out_model}\n")
+        return 0
+
+    agent, rewards = train_q_learning(env=env, episodes=episodes)
     if out_model is not None:
         agent.save(out_model)
 
@@ -394,5 +426,36 @@ def handle_train(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     stdout.write(f"Avg Reward:      {avg_reward:.2f}\n")
     if out_model is not None:
         stdout.write(f"Saved Model:     {out_model}\n")
+
+    return 0
+
+
+def handle_import(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
+    osm_path = Path(args.osm)
+    if not osm_path.exists():
+        raise ConfigurationError(f"OSM file not found: {args.osm}")
+
+    try:
+        raw_data = json.loads(osm_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ConfigurationError(
+            f"failed to parse JSON from {args.osm}: {exc}"
+        ) from exc
+
+    osm_data = parse_osm_json(raw_data)
+    scenario = build_scenario_from_osm(
+        osm_data,
+        center_node_id=args.node_id,
+        junction_id=getattr(args, "junction_id", "osm_junction"),
+    )
+
+    out_path_str = getattr(args, "out", None)
+    if out_path_str:
+        out_path = Path(out_path_str)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(scenario.model_dump_json(indent=2), encoding="utf-8")
+        stdout.write(f"Imported OSM scenario saved to {out_path}\n")
+    else:
+        stdout.write(scenario.model_dump_json(indent=2) + "\n")
 
     return 0
