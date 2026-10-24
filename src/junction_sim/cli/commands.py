@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 import webbrowser
 from pathlib import Path
@@ -18,6 +19,7 @@ from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.engine.engine import SimulationEngine
 from junction_sim.exceptions import ConfigurationError
+from junction_sim.importers.osm import build_scenario_from_osm, parse_osm_json
 from junction_sim.presets import get_preset, list_presets_info
 from junction_sim.reporting.csv_reporter import (
     export_benchmark_to_csv,
@@ -390,5 +392,36 @@ def handle_train(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
     stdout.write(f"Avg Reward:      {avg_reward:.2f}\n")
     if out_model is not None:
         stdout.write(f"Saved Model:     {out_model}\n")
+
+    return 0
+
+
+def handle_import(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
+    osm_path = Path(args.osm)
+    if not osm_path.exists():
+        raise ConfigurationError(f"OSM file not found: {args.osm}")
+
+    try:
+        raw_data = json.loads(osm_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ConfigurationError(
+            f"failed to parse JSON from {args.osm}: {exc}"
+        ) from exc
+
+    osm_data = parse_osm_json(raw_data)
+    scenario = build_scenario_from_osm(
+        osm_data,
+        center_node_id=args.node_id,
+        junction_id=getattr(args, "junction_id", "osm_junction"),
+    )
+
+    out_path_str = getattr(args, "out", None)
+    if out_path_str:
+        out_path = Path(out_path_str)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(scenario.model_dump_json(indent=2), encoding="utf-8")
+        stdout.write(f"Imported OSM scenario saved to {out_path}\n")
+    else:
+        stdout.write(scenario.model_dump_json(indent=2) + "\n")
 
     return 0

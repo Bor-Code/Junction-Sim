@@ -301,4 +301,34 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination path to save trained Q-table JSON policy",
     )
 
+    import_parser = subparsers.add_parser(
+        "import",
+        help="Import an intersection from external map data (OpenStreetMap)",
+    )
+    import_parser.add_argument(
+        "--osm",
+        required=True,
+        type=str,
+        help="Path to OpenStreetMap Overpass JSON export file",
+    )
+    import_parser.add_argument(
+        "--node-id",
+        required=True,
+        type=int,
+        help="Center OSM node ID representing the junction",
+    )
+    import_parser.add_argument(
+        "--junction-id",
+        type=str,
+        default="osm_junction",
+        help="Identifier for the generated intersection (default: osm_junction)",
+    )
+    import_parser.add_argument(
+        "--out",
+        "-o",
+        type=str,
+        default=None,
+        help="Destination path to save the generated scenario JSON",
+    )
+
     return parser
