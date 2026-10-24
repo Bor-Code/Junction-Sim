@@ -468,10 +468,12 @@ def generate_3d_html_visualizer(
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x60a5fa);
-    scene.fog = new THREE.FogExp2(0x93c5fd, 0.0025);
+    scene.background = new THREE.Color(0x0a0f1d);
+    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.007);
 
     const camera = new THREE.PerspectiveCamera(
       42, window.innerWidth / window.innerHeight, 0.1, 1000
@@ -484,21 +486,21 @@ def generate_3d_html_visualizer(
     controls.maxPolarAngle = Math.PI / 2 - 0.03;
     controls.target.set(0, 2.5, -2);
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x475569, 0.75);
+    const hemiLight = new THREE.HemisphereLight(0x94a3b8, 0x1e293b, 0.75);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.2);
+    const sunLight = new THREE.DirectionalLight(0xfff6ed, 2.4);
     sunLight.position.set(65, 95, 60);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 10;
     sunLight.shadow.camera.far = 280;
-    sunLight.shadow.camera.left = -80;
-    sunLight.shadow.camera.right = 80;
-    sunLight.shadow.camera.top = 80;
-    sunLight.shadow.camera.bottom = -80;
-    sunLight.shadow.bias = -0.0004;
+    sunLight.shadow.camera.left = -85;
+    sunLight.shadow.camera.right = 85;
+    sunLight.shadow.camera.top = 85;
+    sunLight.shadow.camera.bottom = -85;
+    sunLight.shadow.bias = -0.0003;
     scene.add(sunLight);
 
     const signalMeshes = {};
@@ -531,39 +533,10 @@ def generate_3d_html_visualizer(
       return new THREE.CanvasTexture(cv);
     }
 
-    function createWarningSignTexture(isDanger) {
-      const cv = document.createElement('canvas');
-      cv.width = 256;
-      cv.height = 256;
-      const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 256, 256);
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.moveTo(128, 16);
-      ctx.lineTo(240, 230);
-      ctx.lineTo(16, 230);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(128, 52);
-      ctx.lineTo(214, 214);
-      ctx.lineTo(42, 214);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 100px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(isDanger ? '!' : 'A', 128, 150);
-      return new THREE.CanvasTexture(cv);
-    }
-
     function buildEnvironment() {
       const terrainGeo = new THREE.PlaneGeometry(500, 500);
       const terrainMat = new THREE.MeshStandardMaterial({
-        color: 0x15803d, roughness: 0.9, metalness: 0.05
+        color: 0x090d16, roughness: 0.95, metalness: 0.05
       });
       const terrain = new THREE.Mesh(terrainGeo, terrainMat);
       terrain.rotation.x = -Math.PI / 2;
@@ -572,10 +545,10 @@ def generate_3d_html_visualizer(
       scene.add(terrain);
 
       const asphaltMat = new THREE.MeshStandardMaterial({
-        color: 0x1f242d, roughness: 0.78, metalness: 0.12
+        color: 0x161a23, roughness: 0.84, metalness: 0.1
       });
       const redBikeMat = new THREE.MeshStandardMaterial({
-        color: 0xb91c1c, roughness: 0.7, metalness: 0.05
+        color: 0x4a1521, roughness: 0.65, metalness: 0.05
       });
 
       const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(17, 340), asphaltMat);
@@ -603,7 +576,7 @@ def generate_3d_html_visualizer(
       });
 
       const bikeCrossingMat = new THREE.MeshStandardMaterial({
-        color: 0x991b1b, roughness: 0.65
+        color: 0x581c28, roughness: 0.65
       });
       const bikeCrossings = [
         { x: 0, z: 10.5, w: 17, h: 1.8 },
@@ -621,7 +594,7 @@ def generate_3d_html_visualizer(
       });
 
       const sidewalkMat = new THREE.MeshStandardMaterial({
-        color: 0x94a3b8, roughness: 0.75
+        color: 0x222838, roughness: 0.72, metalness: 0.08
       });
       const corners = [
         { x: 42, z: 42, w: 62, h: 62 },
@@ -727,171 +700,222 @@ def generate_3d_html_visualizer(
       addDashedLine(-17, 3.8, -160, 3.8, whiteLineMat, 28);
       addDashedLine(-17, -3.8, -160, -3.8, whiteLineMat, 28);
 
-      buildBuildingsAndScenery();
-      buildConstructionSite();
+      buildModernCityscape();
       buildRoadSigns();
       buildCurvedGantrySignals();
     }
 
-    function buildBuildingsAndScenery() {
-      const greenGlassMat = new THREE.MeshStandardMaterial({
-        color: 0x064e3b, roughness: 0.15, metalness: 0.8
-      });
-      const commercial = new THREE.Mesh(
-        new THREE.CylinderGeometry(28, 28, 38, 24, 1, false, 0, Math.PI * 0.75),
-        greenGlassMat
-      );
-      commercial.position.set(48, 19, -46);
-      commercial.rotation.y = Math.PI * 0.9;
-      commercial.castShadow = true;
-      commercial.receiveShadow = true;
-      scene.add(commercial);
+    function createBuildingTexture(wallHex) {
+      const cv = document.createElement('canvas');
+      cv.width = 256; cv.height = 256;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = wallHex;
+      ctx.fillRect(0, 0, 256, 256);
 
-      const bldgDefs = [
-        { x: -52, z: 52, w: 38, d: 36, h: 24, col: 0xb45309 },
-        { x: 55, z: 52, w: 36, d: 32, h: 42, col: 0x1e293b }
+      const rows = 12, cols = 6;
+      const padX = 8, padY = 6;
+      const winW = (256 - padX * (cols + 1)) / cols;
+      const winH = (256 - padY * (rows + 1)) / rows;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = padX + c * (winW + padX);
+          const y = padY + r * (winH + padY);
+          const val = Math.sin(r * 19 + c * 37);
+          if (val > 0.35) {
+            ctx.fillStyle = '#fef08a';
+          } else if (val > 0.05) {
+            ctx.fillStyle = '#bae6fd';
+          } else if (val > -0.2) {
+            ctx.fillStyle = '#334155';
+          } else {
+            ctx.fillStyle = '#0f172a';
+          }
+          ctx.fillRect(x, y, winW, winH);
+        }
+      }
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function buildModernCityscape() {
+      const texDark = createBuildingTexture('#1e293b');
+      const texBlue = createBuildingTexture('#0f172a');
+      const texSlate = createBuildingTexture('#334155');
+
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x0284c7, roughness: 0.1, metalness: 0.85
+      });
+      const darkMetalMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a, roughness: 0.4, metalness: 0.8
+      });
+      const warmLightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+      const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+
+      const towers = [
+        { x: 50, z: -50, w: 34, d: 32, h: 76, tex: texBlue, cap: 'spire' },
+        { x: 88, z: -46, w: 28, d: 28, h: 52, tex: texDark, cap: 'terrace' },
+        { x: -50, z: -50, w: 34, d: 32, h: 64, tex: texSlate, cap: 'solar' },
+        { x: -86, z: -44, w: 28, d: 26, h: 46, tex: texBlue, cap: 'box' },
+        { x: -52, z: 52, w: 36, d: 34, h: 72, tex: texDark, cap: 'stepped' },
+        { x: -44, z: 88, w: 30, d: 26, h: 48, tex: texSlate, cap: 'terrace' },
+        { x: 52, z: 52, w: 36, d: 34, h: 84, tex: texBlue, cap: 'spire' },
+        { x: 88, z: 48, w: 28, d: 30, h: 54, tex: texDark, cap: 'box' }
       ];
-      bldgDefs.forEach(b => {
+
+      towers.forEach(t => {
         const mat = new THREE.MeshStandardMaterial({
-          color: b.col, roughness: 0.7
+          map: t.tex, roughness: 0.4, metalness: 0.3
         });
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), mat);
-        mesh.position.set(b.x, b.h / 2, b.z);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.d), mat);
+        mesh.position.set(t.x, t.h / 2, t.z);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         scene.add(mesh);
+
+        const lobby = new THREE.Mesh(
+          new THREE.BoxGeometry(t.w * 0.7, 4.5, 1.2), warmLightMat
+        );
+        const lz = t.z > 0 ? (t.z - t.d * 0.5 - 0.6) : (t.z + t.d * 0.5 + 0.6);
+        lobby.position.set(t.x, 2.25, lz);
+        scene.add(lobby);
+
+        if (t.cap === 'spire') {
+          const spire = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.2, 0.8, 18, 8), darkMetalMat
+          );
+          spire.position.set(t.x, t.h + 9, t.z);
+          scene.add(spire);
+          const beacon = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 8, 8), beaconMat
+          );
+          beacon.position.set(t.x, t.h + 18, t.z);
+          scene.add(beacon);
+        } else if (t.cap === 'terrace') {
+          const glassTop = new THREE.Mesh(
+            new THREE.BoxGeometry(t.w * 0.6, 6, t.d * 0.6), glassMat
+          );
+          glassTop.position.set(t.x, t.h + 3, t.z);
+          scene.add(glassTop);
+        }
       });
 
-      const treeMat1 = new THREE.MeshStandardMaterial({
-        color: 0x15803d, roughness: 0.65
+      const lampMat = new THREE.MeshStandardMaterial({
+        color: 0x09090b, roughness: 0.3, metalness: 0.9
       });
-      const treeMat2 = new THREE.MeshStandardMaterial({
-        color: 0x166534, roughness: 0.7
+      const lampHeadMat = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
+
+      function addLamp(lx, lz, rotY) {
+        const lampGroup = new THREE.Group();
+        lampGroup.position.set(lx, 0, lz);
+        lampGroup.rotation.y = rotY;
+
+        const pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.16, 7.2, 8), lampMat
+        );
+        pole.position.y = 3.6;
+        lampGroup.add(pole);
+
+        const arm = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 0.12, 0.12), lampMat
+        );
+        arm.position.set(0.7, 7.1, 0);
+        lampGroup.add(arm);
+
+        const head = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 0.15, 0.3), lampHeadMat
+        );
+        head.position.set(1.4, 7.0, 0);
+        lampGroup.add(head);
+
+        const pl = new THREE.PointLight(0xffedd5, 0.8, 18);
+        pl.position.set(1.4, 6.8, 0);
+        lampGroup.add(pl);
+
+        scene.add(lampGroup);
+      }
+
+      [28, 62, 98].forEach(d => {
+        addLamp(10.6, d, -Math.PI / 2);
+        addLamp(-10.6, d, Math.PI / 2);
+        addLamp(10.6, -d, -Math.PI / 2);
+        addLamp(-10.6, -d, Math.PI / 2);
+
+        addLamp(d, 10.6, 0);
+        addLamp(d, -10.6, Math.PI);
+        addLamp(-d, 10.6, 0);
+        addLamp(-d, -10.6, Math.PI);
       });
-      const treeMat3 = new THREE.MeshStandardMaterial({
-        color: 0x4d7c0f, roughness: 0.65
+
+      const planterMat = new THREE.MeshStandardMaterial({
+        color: 0x334155, roughness: 0.8
+      });
+      const soilMat = new THREE.MeshStandardMaterial({
+        color: 0x1c1917, roughness: 0.9
       });
       const trunkMat = new THREE.MeshStandardMaterial({
-        color: 0x451a03, roughness: 0.9
+        color: 0x292524, roughness: 0.9
+      });
+      const folMat1 = new THREE.MeshStandardMaterial({
+        color: 0x15803d, roughness: 0.65
+      });
+      const folMat2 = new THREE.MeshStandardMaterial({
+        color: 0x166534, roughness: 0.7
       });
 
-      for (let i = 0; i < 36; i++) {
-        const angle = (i / 36) * Math.PI * 2;
-        const rad = 30 + (i % 4) * 7;
-        const tx = Math.cos(angle) * rad;
-        const tz = Math.sin(angle) * rad;
-        if (Math.abs(tx) < 13 || Math.abs(tz) < 13) continue;
+      function addTreePlanter(tx, tz) {
+        const pGroup = new THREE.Group();
+        pGroup.position.set(tx, 0, tz);
+
+        const basin = new THREE.Mesh(
+          new THREE.BoxGeometry(1.8, 0.3, 1.8), planterMat
+        );
+        basin.position.y = 0.15;
+        pGroup.add(basin);
+
+        const soil = new THREE.Mesh(
+          new THREE.BoxGeometry(1.5, 0.05, 1.5), soilMat
+        );
+        soil.position.y = 0.28;
+        pGroup.add(soil);
 
         const trunk = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.24, 0.36, 3.6, 8), trunkMat
+          new THREE.CylinderGeometry(0.12, 0.18, 3.4, 8), trunkMat
         );
-        trunk.position.set(tx, 1.8, tz);
+        trunk.position.y = 1.7;
         trunk.castShadow = true;
-        scene.add(trunk);
+        pGroup.add(trunk);
 
-        const leafMat = (i % 3 === 0) ? treeMat1 : (
-          (i % 3 === 1) ? treeMat2 : treeMat3
-        );
         const crown1 = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(2.5, 1), leafMat
+          new THREE.DodecahedronGeometry(1.6, 1), folMat1
         );
-        crown1.position.set(tx, 4.6, tz);
+        crown1.position.set(0, 3.8, 0);
         crown1.castShadow = true;
-        scene.add(crown1);
+        pGroup.add(crown1);
 
         const crown2 = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(1.9, 1), leafMat
+          new THREE.DodecahedronGeometry(1.1, 1), folMat2
         );
-        crown2.position.set(tx + 0.5, 6.2, tz + 0.4);
+        crown2.position.set(0.2, 4.9, 0.1);
         crown2.castShadow = true;
-        scene.add(crown2);
+        pGroup.add(crown2);
+
+        scene.add(pGroup);
       }
-    }
 
-    function buildConstructionSite() {
-      const siteGroup = new THREE.Group();
-      siteGroup.position.set(-26, 0, -24);
+      [20, 44, 76, 108].forEach(dist => {
+        addTreePlanter(11.2, dist);
+        addTreePlanter(-11.2, dist);
+        addTreePlanter(11.2, -dist);
+        addTreePlanter(-11.2, -dist);
 
-      const cabMatYellow = new THREE.MeshStandardMaterial({
-        color: 0xeab308, roughness: 0.4
+        addTreePlanter(dist, 11.2);
+        addTreePlanter(dist, -11.2);
+        addTreePlanter(-dist, 11.2);
+        addTreePlanter(-dist, -11.2);
       });
-      const cabMatBlue = new THREE.MeshStandardMaterial({
-        color: 0x0284c7, roughness: 0.4
-      });
-      const frameMat = new THREE.MeshStandardMaterial({
-        color: 0xf8fafc, roughness: 0.3
-      });
-
-      const cab1 = new THREE.Mesh(
-        new THREE.BoxGeometry(7.2, 3.1, 3.1), cabMatYellow
-      );
-      cab1.position.set(0, 1.55, 0);
-      cab1.castShadow = true;
-      siteGroup.add(cab1);
-
-      const cab2 = new THREE.Mesh(
-        new THREE.BoxGeometry(7.2, 3.1, 3.1), cabMatBlue
-      );
-      cab2.position.set(0, 4.65, 0);
-      cab2.castShadow = true;
-      siteGroup.add(cab2);
-
-      const winGeo = new THREE.BoxGeometry(1.6, 1.2, 0.1);
-      const win1 = new THREE.Mesh(winGeo, frameMat);
-      win1.position.set(-1.8, 1.6, 1.6);
-      siteGroup.add(win1);
-
-      const win2 = new THREE.Mesh(winGeo, frameMat);
-      win2.position.set(1.8, 1.6, 1.6);
-      siteGroup.add(win2);
-
-      const win3 = new THREE.Mesh(winGeo, frameMat);
-      win3.position.set(0, 4.7, 1.6);
-      siteGroup.add(win3);
-
-      const craneGroup = new THREE.Group();
-      craneGroup.position.set(-56, 0, -32);
-      const craneMat = new THREE.MeshStandardMaterial({
-        color: 0xf59e0b, metalness: 0.6, roughness: 0.35
-      });
-
-      const mast = new THREE.Mesh(new THREE.BoxGeometry(1.8, 56, 1.8), craneMat);
-      mast.position.y = 28;
-      craneGroup.add(mast);
-
-      const jib = new THREE.Mesh(new THREE.BoxGeometry(46, 1.4, 1.4), craneMat);
-      jib.position.set(14, 54, 0);
-      craneGroup.add(jib);
-
-      const counterJib = new THREE.Mesh(
-        new THREE.BoxGeometry(16, 1.4, 1.4), craneMat
-      );
-      counterJib.position.set(-10, 54, 0);
-      craneGroup.add(counterJib);
-
-      const weight = new THREE.Mesh(
-        new THREE.BoxGeometry(5, 3.5, 2.2),
-        new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 })
-      );
-      weight.position.set(-14, 53, 0);
-      craneGroup.add(weight);
-
-      const hookCable = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 22, 6),
-        new THREE.MeshBasicMaterial({ color: 0x0f172a })
-      );
-      hookCable.position.set(16, 42, 0);
-      craneGroup.add(hookCable);
-
-      const hookBlock = new THREE.Mesh(
-        new THREE.BoxGeometry(1.2, 1.2, 0.8),
-        new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 })
-      );
-      hookBlock.position.set(16, 31, 0);
-      craneGroup.add(hookBlock);
-
-      scene.add(siteGroup);
-      scene.add(craneGroup);
     }
 
     function buildRoadSigns() {
@@ -918,25 +942,6 @@ def generate_3d_html_visualizer(
       boardMesh.position.set(0, 7.2, 0.2);
       signGroup.add(boardMesh);
       scene.add(signGroup);
-
-      const warnTexDanger = createWarningSignTexture(true);
-      const warnTexWork = createWarningSignTexture(false);
-      const dangerMat = new THREE.MeshStandardMaterial({
-        map: warnTexDanger, roughness: 0.4
-      });
-      const workMat = new THREE.MeshStandardMaterial({
-        map: warnTexWork, roughness: 0.4
-      });
-
-      const wSign1 = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), dangerMat);
-      wSign1.position.set(12.5, 2.6, 18);
-      wSign1.rotation.y = -Math.PI / 6;
-      scene.add(wSign1);
-
-      const wSign2 = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), workMat);
-      wSign2.position.set(-13, 2.6, 18);
-      wSign2.rotation.y = Math.PI / 6;
-      scene.add(wSign2);
     }
 
     function buildCurvedGantrySignals() {
@@ -1074,20 +1079,20 @@ def generate_3d_html_visualizer(
 
       const bodyMat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(colorHex),
-        metalness: 0.65,
-        roughness: 0.25
+        metalness: 0.82,
+        roughness: 0.2
       });
       const glassMat = new THREE.MeshStandardMaterial({
-        color: 0x0f172a, roughness: 0.1, metalness: 0.2
+        color: 0x020617, roughness: 0.05, metalness: 0.95
       });
       const trailerMat = new THREE.MeshStandardMaterial({
-        color: 0xf1f5f9, metalness: 0.3, roughness: 0.5
+        color: 0xf1f5f9, metalness: 0.2, roughness: 0.45
       });
       const rubberMat = new THREE.MeshStandardMaterial({
-        color: 0x111827, roughness: 0.95
+        color: 0x09090b, roughness: 0.95
       });
       const chromeMat = new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0, metalness: 0.9, roughness: 0.1
+        color: 0xf8fafc, metalness: 0.95, roughness: 0.08
       });
 
       if (isSemi) {
@@ -1221,6 +1226,12 @@ def generate_3d_html_visualizer(
 
           const wMesh = new THREE.Mesh(wheelGeo, rubberMat);
           wMesh.castShadow = true;
+          const rimGeo = new THREE.CylinderGeometry(
+            wheelRad * 0.62, wheelRad * 0.62, wheelWid * 1.05, 12
+          );
+          rimGeo.rotateZ(Math.PI / 2);
+          const rimMesh = new THREE.Mesh(rimGeo, chromeMat);
+          wMesh.add(rimMesh);
           wPivot.add(wMesh);
           group.add(wPivot);
 
@@ -1322,23 +1333,23 @@ def generate_3d_html_visualizer(
 
     function setLightingMode(mode) {
       if (mode === 'day') {
-        scene.background = new THREE.Color(0x60a5fa);
-        scene.fog.color = new THREE.Color(0x93c5fd);
-        sunLight.color.setHex(0xfffaed);
-        sunLight.intensity = 2.2;
+        scene.background.setHex(0x0a0f1d);
+        scene.fog.color.setHex(0x0a0f1d);
+        sunLight.color.setHex(0xfff6ed);
+        sunLight.intensity = 2.4;
         hemiLight.intensity = 0.75;
       } else if (mode === 'sunset') {
-        scene.background = new THREE.Color(0x31102f);
-        scene.fog.color = new THREE.Color(0x31102f);
+        scene.background.setHex(0x1a0f24);
+        scene.fog.color.setHex(0x1a0f24);
         sunLight.color.setHex(0xf97316);
-        sunLight.intensity = 2.4;
-        hemiLight.intensity = 0.45;
+        sunLight.intensity = 2.6;
+        hemiLight.intensity = 0.5;
       } else if (mode === 'night') {
-        scene.background = new THREE.Color(0x020617);
-        scene.fog.color = new THREE.Color(0x020617);
-        sunLight.color.setHex(0x38bdf8);
-        sunLight.intensity = 0.25;
-        hemiLight.intensity = 0.18;
+        scene.background.setHex(0x030712);
+        scene.fog.color.setHex(0x030712);
+        sunLight.color.setHex(0x1e293b);
+        sunLight.intensity = 0.3;
+        hemiLight.intensity = 0.2;
       }
     }
 
