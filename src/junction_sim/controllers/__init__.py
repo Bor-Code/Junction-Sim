@@ -13,6 +13,14 @@ from junction_sim.controllers.protocol import (
     ControllerDecision,
     SignalController,
 )
+from junction_sim.controllers.reservation import (
+    ReservationController,
+    ReservationGrid,
+    ReservationRecord,
+    ReservationRequest,
+    ReservationStatus,
+    ReservationTile,
+)
 from junction_sim.rl.q_learning import QLearningController
 
 __all__ = [
@@ -25,6 +33,12 @@ __all__ = [
     "FixedTimeController",
     "MaxPressureController",
     "QLearningController",
+    "ReservationController",
+    "ReservationGrid",
+    "ReservationRecord",
+    "ReservationRequest",
+    "ReservationStatus",
+    "ReservationTile",
     "SignalController",
     "compute_green_wave_offsets",
     "compute_progression_bandwidth",
