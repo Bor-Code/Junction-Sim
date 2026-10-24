@@ -240,6 +240,12 @@ def generate_3d_html_visualizer(
         "      background: rgba(245, 158, 11, 0.2);",
         "      border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;",
         "    }",
+        "    .btn-heatmap-active {",
+        "      background: rgba(239, 68, 68, 0.25) !important;",
+        "      border-color: rgba(239, 68, 68, 0.6) !important;",
+        "      color: #f87171 !important;",
+        "      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);",
+        "    }",
         "    .inspector-card {",
         "      position: absolute; left: 18px; bottom: 120px; width: 280px;",
         "      padding: 14px; display: none; flex-direction: column; gap: 8px;",
@@ -489,6 +495,7 @@ def generate_3d_html_visualizer(
         '          <button class="light-btn" data-light="sunset">Sunset</button>',
         '          <button class="light-btn" data-light="night">Night</button>',
         '          <button class="light-btn" data-light="rain">Rainy</button>',
+        '          <button class="cam-btn" id="btn-heatmap">Heatmap: Off</button>',
         "        </div>",
         "      </div>",
         "    </div>",
@@ -689,6 +696,8 @@ def generate_3d_html_visualizer(
 
     const signalMeshes = {};
     const stopBars = {};
+    const heatmapMeshes = {};
+    let heatmapEnabled = false;
 
     function createSignboardTexture() {
       const cv = document.createElement('canvas');
@@ -888,6 +897,27 @@ def generate_3d_html_visualizer(
       buildModernCityscape();
       buildRoadSigns();
       buildCurvedGantrySignals();
+
+      function createHeatmapMesh(w, l) {
+        const geo = new THREE.PlaneGeometry(w, l);
+        const mat = new THREE.MeshBasicMaterial({
+          color: 0x10b981,
+          transparent: true,
+          opacity: 0.5,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+        const m = new THREE.Mesh(geo, mat);
+        m.rotation.x = -Math.PI / 2;
+        m.visible = false;
+        scene.add(m);
+        return m;
+      }
+
+      heatmapMeshes['north'] = createHeatmapMesh(7.4, 1);
+      heatmapMeshes['south'] = createHeatmapMesh(7.4, 1);
+      heatmapMeshes['east'] = createHeatmapMesh(1, 7.4);
+      heatmapMeshes['west'] = createHeatmapMesh(1, 7.4);
     }
 
     function createBuildingTexture(wallHex) {
@@ -1483,9 +1513,25 @@ def generate_3d_html_visualizer(
 
     document.querySelectorAll('.cam-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        setCameraMode(btn.dataset.cam);
+        if (btn.dataset.cam) {
+          setCameraMode(btn.dataset.cam);
+        }
       });
     });
+
+    const btnHeatmap = document.getElementById('btn-heatmap');
+    if (btnHeatmap) {
+      btnHeatmap.addEventListener('click', () => {
+        heatmapEnabled = !heatmapEnabled;
+        btnHeatmap.textContent = (
+          heatmapEnabled ? 'Heatmap: On' : 'Heatmap: Off'
+        );
+        btnHeatmap.classList.toggle('btn-heatmap-active', heatmapEnabled);
+        for (const hm of Object.values(heatmapMeshes)) {
+          hm.visible = heatmapEnabled;
+        }
+      });
+    }
 
     function setCameraMode(mode) {
       currentCameraMode = mode;
@@ -1631,6 +1677,9 @@ def generate_3d_html_visualizer(
       if (currentStep) {
         updateSignals(currentStep);
         updateHUDMetrics(currentStep);
+        if (heatmapEnabled) {
+          updateHeatmap(currentStep);
+        }
       }
 
       let activeCount = 0;
@@ -1832,6 +1881,62 @@ def generate_3d_html_visualizer(
       document.getElementById('hud-avg-delay').textContent = `${avgD} s`;
     }
 
+    function getApproachQueue(queueLengths, dir) {
+      if (!queueLengths) return 0;
+      let count = 0;
+      const prefix = dir[0].toUpperCase();
+      for (const [lid, q] of Object.entries(queueLengths)) {
+        if (lid.startsWith(prefix) || lid.toLowerCase().includes(dir)) {
+          count += q;
+        }
+      }
+      return count;
+    }
+
+    function updateHeatmap(step) {
+      const qN = getApproachQueue(step.queue_lengths, 'north');
+      const qS = getApproachQueue(step.queue_lengths, 'south');
+      const qE = getApproachQueue(step.queue_lengths, 'east');
+      const qW = getApproachQueue(step.queue_lengths, 'west');
+
+      const approaches = [
+        { dir: 'north', q: qN, isHoriz: false, sx: 3.8, sz: 13, sign: 1 },
+        { dir: 'south', q: qS, isHoriz: false, sx: -3.8, sz: -13, sign: -1 },
+        { dir: 'east', q: qE, isHoriz: true, sx: 13, sz: -3.8, sign: 1 },
+        { dir: 'west', q: qW, isHoriz: true, sx: -13, sz: 3.8, sign: -1 }
+      ];
+
+      approaches.forEach(a => {
+        const m = heatmapMeshes[a.dir];
+        if (!m) return;
+        m.visible = heatmapEnabled;
+        if (!heatmapEnabled) return;
+
+        const L = Math.max(2.5, Math.min(80.0, a.q * 7.5));
+        if (a.isHoriz) {
+          m.scale.set(L, 1, 1);
+          m.position.set(a.sx + (L / 2) * a.sign, 0.055, a.sz);
+        } else {
+          m.scale.set(1, L, 1);
+          m.position.set(a.sx, 0.055, a.sz + (L / 2) * a.sign);
+        }
+
+        let hex = 0x10b981;
+        let op = 0.45;
+        if (a.q >= 7) {
+          hex = 0xef4444;
+          op = 0.85;
+        } else if (a.q >= 3) {
+          hex = 0xf59e0b;
+          op = 0.65;
+        } else if (a.q === 0) {
+          op = 0.18;
+        }
+        m.material.color.setHex(hex);
+        m.material.opacity = op;
+      });
+    }
+
     function updateInspector(st) {
       inspector.style.display = 'flex';
       document.getElementById('insp-id').textContent = st.vehicle_id;
@@ -1962,6 +2067,8 @@ def generate_3d_html_visualizer(
         document.querySelectorAll('.light-btn')[nextIdx].click();
       } else if (e.key === 'r' || e.key === 'R') {
         btnReset.click();
+      } else if (e.key === 'h' || e.key === 'H') {
+        if (btnHeatmap) btnHeatmap.click();
       }
     });
 
