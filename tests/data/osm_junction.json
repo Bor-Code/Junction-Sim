@@ -1,0 +1,73 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "lat": 41.0082,
+      "lon": 28.9784,
+      "tags": {
+        "highway": "traffic_signals"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1002,
+      "lat": 41.0182,
+      "lon": 28.9784
+    },
+    {
+      "type": "node",
+      "id": 1003,
+      "lat": 40.9982,
+      "lon": 28.9784
+    },
+    {
+      "type": "node",
+      "id": 1004,
+      "lat": 41.0082,
+      "lon": 28.9884
+    },
+    {
+      "type": "node",
+      "id": 1005,
+      "lat": 41.0082,
+      "lon": 28.9684
+    },
+    {
+      "type": "way",
+      "id": 2001,
+      "nodes": [1001, 1002],
+      "tags": {
+        "highway": "primary",
+        "lanes": "2"
+      }
+    },
+    {
+      "type": "way",
+      "id": 2002,
+      "nodes": [1003, 1001],
+      "tags": {
+        "highway": "primary",
+        "lanes": "2"
+      }
+    },
+    {
+      "type": "way",
+      "id": 2003,
+      "nodes": [1001, 1004],
+      "tags": {
+        "highway": "secondary",
+        "lanes": "1"
+      }
+    },
+    {
+      "type": "way",
+      "id": 2004,
+      "nodes": [1005, 1001],
+      "tags": {
+        "highway": "secondary",
+        "lanes": "1"
+      }
+    }
+  ]
+}
