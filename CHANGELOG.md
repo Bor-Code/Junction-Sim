@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-10-24
+
+### Added
+- **Deep Q-Network (DQN) Signal Controller**:
+  - Neural `DQNAgent` and `DQNController` with experience replay buffer, target network updates, and Huber loss.
+  - CLI training support: `junction-sim train --algorithm dqn --episodes N`.
+- **Autonomous CAV Space-Time Reservation Grid**:
+  - `ReservationGrid` and `ReservationController` implementing Autonomous Intersection Management (AIM).
+  - Fine-grained spatial cell and temporal interval conflict checking for Connected and Autonomous Vehicles (CAVs).
+  - Zero-delay intersection crossing with eliminate inter-phase clearance waste.
+- **OpenStreetMap (OSM) Importer**:
+  - `build_scenario_from_osm` and `parse_osm_json` to import real-world geometry from Overpass API JSON exports.
+  - CLI subcommand: `junction-sim import --osm <file> --node-id <id>`.
+- **Automated CI/CD & Publishing**:
+  - GitHub Pages deployment workflow (`.github/workflows/pages.yml`) hosting online interactive 3D simulation.
+  - PyPI Trusted Publishing OIDC workflow (`.github/workflows/release.yml`) for automated package distribution.
+- **Documentation & Benchmarking**:
+  - Comprehensive CLI reference guide covering all 6 subcommands (`run`, `benchmark`, `presets`, `visualize`, `train`, `import`).
+  - 6-controller multi-seed comparative benchmark on Webster Four-Way scenario.
+
+## [0.2.0] - 2026-10-24
+
+### Added
+- **Photorealistic 3D WebGL Visualizer**:
+  - Three.js visualizer with UnrealBloomPass post-processing, wet asphalt reflections, and dynamic headlights.
+  - First-person cockpit telemetry HUD with digital speedometer, dynamic throttle/brake gauges, and G-meter.
+  - Dynamic asphalt congestion heatmap overlay and emergency vehicle preemption mode.
+- **Microscopic Traffic & IDM Car-Following**:
+  - Continuous trajectory generation using the Intelligent Driver Model (IDM).
+  - Driver personality profiles (`Cautious`, `Normal`, `Aggressive`).
+- **VT-Micro Fuel & Emissions Model**:
+  - Power-based fuel consumption rates (mL/s) and stoichiometric combustion CO2 emission rates (g/s).
+- **Corridor Coordination & RL**:
+  - Arterial green-wave progression controller (`CoordinatedSignalController`).
+  - Tabular Q-learning controller (`QLearningController`) with serialization.
+
 ## [0.1.0] - 2026-10-24
 
 ### Added

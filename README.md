@@ -5,7 +5,7 @@ A discrete-event traffic simulation, microscopic kinematics engine, and signal b
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Coverage](https://img.shields.io/badge/coverage-100.00%25-brightgreen.svg)]()
-[![Version](https://img.shields.io/badge/release-v0.2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/release-v0.3.0-blue.svg)]()
 [![PyPI](https://img.shields.io/pypi/v/junction-sim.svg)](https://pypi.org/project/junction-sim/)
 [![Live Demo](https://img.shields.io/badge/demo-online_3D_simulation-brightgreen.svg)](https://bor-code.github.io/Junction-Sim/)
 

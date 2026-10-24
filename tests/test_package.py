@@ -8,7 +8,7 @@ import junction_sim
 
 def test_package_version() -> None:
     assert isinstance(junction_sim.__version__, str)
-    assert junction_sim.__version__ == "0.2.0"
+    assert junction_sim.__version__ == "0.3.0"
 
 
 def test_all_exports_present() -> None:
