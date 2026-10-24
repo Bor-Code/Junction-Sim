@@ -8,6 +8,7 @@ from junction_sim.benchmarks.harness import BenchmarkHarness
 from junction_sim.config.loader import load_scenario_from_file
 from junction_sim.config.schema import ScenarioConfig
 from junction_sim.controllers.actuated import ActuatedController
+from junction_sim.controllers.coordinated import CoordinatedSignalController
 from junction_sim.controllers.dual_ring import DualRingController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
@@ -66,9 +67,11 @@ def instantiate_controller(
         return QLearningController(
             agent=agent, signal_plan=signal_plan, intersection=intersection
         )
+    if name in ("coordinated", "green-wave"):
+        return CoordinatedSignalController(signal_plan=signal_plan)
     raise ConfigurationError(
         f"unknown controller '{name}', expected one of: "
-        "fixed-time, actuated, max-pressure, dual-ring, q-learning"
+        "fixed-time, actuated, max-pressure, dual-ring, q-learning, coordinated"
     )
 
 
