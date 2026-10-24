@@ -52,3 +52,4 @@ dmypy.json
 .DS_Store
 Thumbs.db
 *.html
+!docs/index.html
