@@ -23,6 +23,10 @@ from junction_sim.controllers.protocol import (
     ControllerDecision,
     SignalController,
 )
+from junction_sim.controllers.reservation import (
+    ReservationController,
+    ReservationGrid,
+)
 from junction_sim.domain.approach import Approach
 from junction_sim.domain.crosswalk import Crosswalk, PedestrianSignalState
 from junction_sim.domain.direction import Direction
@@ -184,6 +188,8 @@ __all__ = [
     "list_presets",
     "list_presets_info",
     "parse_osm_json",
+    "ReservationController",
+    "ReservationGrid",
     "RLController",
     "render_ascii_intersection",
     "render_queue_bars",

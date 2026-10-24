@@ -14,6 +14,7 @@ from junction_sim.controllers.dual_ring import DualRingController
 from junction_sim.controllers.fixed_time import FixedTimeController
 from junction_sim.controllers.max_pressure import MaxPressureController
 from junction_sim.controllers.protocol import SignalController
+from junction_sim.controllers.reservation import ReservationController
 from junction_sim.domain.dual_ring import build_nema_eight_phase_structure
 from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
@@ -84,9 +85,12 @@ def instantiate_controller(
         )
     if name in ("coordinated", "green-wave"):
         return CoordinatedSignalController(signal_plan=signal_plan)
+    if name == "reservation":
+        return ReservationController(signal_plan=signal_plan, intersection=intersection)
     raise ConfigurationError(
         f"unknown controller '{name}', expected one of: "
-        "fixed-time, actuated, max-pressure, dual-ring, q-learning, dqn, coordinated"
+        "fixed-time, actuated, max-pressure, dual-ring, "
+        "q-learning, dqn, reservation, coordinated"
     )
 
 
