@@ -70,6 +70,13 @@ from junction_sim.exceptions import (
     SimulationError,
     ValidationError,
 )
+from junction_sim.importers import (
+    OSMData,
+    OSMNode,
+    OSMWay,
+    build_scenario_from_osm,
+    parse_osm_json,
+)
 from junction_sim.presets import (
     PresetInfo,
     build_arterial_corridor_preset,
@@ -148,6 +155,9 @@ __all__ = [
     "MultiSeedBenchmarkResult",
     "MultiSeedMetrics",
     "NEMAPhase",
+    "OSMData",
+    "OSMNode",
+    "OSMWay",
     "Pedestrian",
     "PedestrianArrivalGenerator",
     "PedestrianDemandConfig",
@@ -160,11 +170,13 @@ __all__ = [
     "build_bottleneck_spillback_preset",
     "build_nema_eight_phase_structure",
     "build_peak_hour_surge_preset",
+    "build_scenario_from_osm",
     "build_webster_four_way_preset",
     "get_preset",
     "get_preset_info",
     "list_presets",
     "list_presets_info",
+    "parse_osm_json",
     "RLController",
     "render_ascii_intersection",
     "render_queue_bars",
