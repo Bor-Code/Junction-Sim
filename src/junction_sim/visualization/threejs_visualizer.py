@@ -58,6 +58,13 @@ def generate_3d_html_visualizer(
         "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/"
         "OrbitControls.js"
     )
+    p_base = "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/"
+    comp_cdn = f"{p_base}postprocessing/EffectComposer.js"
+    rp_cdn = f"{p_base}postprocessing/RenderPass.js"
+    sp_cdn = f"{p_base}postprocessing/ShaderPass.js"
+    cs_cdn = f"{p_base}shaders/CopyShader.js"
+    lum_cdn = f"{p_base}shaders/LuminosityHighPassShader.js"
+    bloom_cdn = f"{p_base}postprocessing/UnrealBloomPass.js"
 
     html_parts = [
         "<!DOCTYPE html>",
@@ -71,6 +78,12 @@ def generate_3d_html_visualizer(
         f'  <link href="{font_url}" rel="stylesheet">',
         f'  <script src="{three_cdn}"></script>',
         f'  <script src="{orbit_cdn}"></script>',
+        f'  <script src="{comp_cdn}"></script>',
+        f'  <script src="{rp_cdn}"></script>',
+        f'  <script src="{sp_cdn}"></script>',
+        f'  <script src="{cs_cdn}"></script>',
+        f'  <script src="{lum_cdn}"></script>',
+        f'  <script src="{bloom_cdn}"></script>',
         "  <style>",
         "    :root {",
         "      --bg-glass: rgba(15, 23, 42, 0.85);",
@@ -390,6 +403,7 @@ def generate_3d_html_visualizer(
         ('          <button class="light-btn active" data-light="day">Sunny</button>'),
         '          <button class="light-btn" data-light="sunset">Sunset</button>',
         '          <button class="light-btn" data-light="night">Night</button>',
+        '          <button class="light-btn" data-light="rain">Rainy</button>',
         "        </div>",
         "      </div>",
         "    </div>",
@@ -503,6 +517,45 @@ def generate_3d_html_visualizer(
     sunLight.shadow.bias = -0.0003;
     scene.add(sunLight);
 
+    let composer = null;
+    let bloomPass = null;
+    let envAsphaltMat = null;
+
+    if (
+      typeof THREE.EffectComposer !== 'undefined' &&
+      typeof THREE.UnrealBloomPass !== 'undefined'
+    ) {
+      composer = new THREE.EffectComposer(renderer);
+      const renderPass = new THREE.RenderPass(scene, camera);
+      composer.addPass(renderPass);
+
+      bloomPass = new THREE.UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        1.15,
+        0.4,
+        0.82
+      );
+      composer.addPass(bloomPass);
+    }
+
+    const rainCount = 1800;
+    const rainGeo = new THREE.BufferGeometry();
+    const rainPositions = new Float32Array(rainCount * 3);
+    for (let i = 0; i < rainCount; i++) {
+      rainPositions[i * 3] = (Math.random() - 0.5) * 160;
+      rainPositions[i * 3 + 1] = Math.random() * 60;
+      rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 160;
+    }
+    rainGeo.setAttribute(
+      'position', new THREE.BufferAttribute(rainPositions, 3)
+    );
+    const rainMat = new THREE.PointsMaterial({
+      color: 0x93c5fd, size: 0.35, transparent: true, opacity: 0.65
+    });
+    const rainMesh = new THREE.Points(rainGeo, rainMat);
+    rainMesh.visible = false;
+    scene.add(rainMesh);
+
     const signalMeshes = {};
     const stopBars = {};
 
@@ -547,6 +600,7 @@ def generate_3d_html_visualizer(
       const asphaltMat = new THREE.MeshStandardMaterial({
         color: 0x161a23, roughness: 0.84, metalness: 0.1
       });
+      envAsphaltMat = asphaltMat;
       const redBikeMat = new THREE.MeshStandardMaterial({
         color: 0x4a1521, roughness: 0.65, metalness: 0.05
       });
@@ -1332,6 +1386,14 @@ def generate_3d_html_visualizer(
     });
 
     function setLightingMode(mode) {
+      const isRain = (mode === 'rain');
+      if (typeof rainMesh !== 'undefined' && rainMesh) {
+        rainMesh.visible = isRain;
+      }
+      if (envAsphaltMat) {
+        envAsphaltMat.roughness = isRain ? 0.12 : 0.84;
+        envAsphaltMat.metalness = isRain ? 0.55 : 0.1;
+      }
       if (mode === 'day') {
         scene.background.setHex(0x0a0f1d);
         scene.fog.color.setHex(0x0a0f1d);
@@ -1350,6 +1412,12 @@ def generate_3d_html_visualizer(
         sunLight.color.setHex(0x1e293b);
         sunLight.intensity = 0.3;
         hemiLight.intensity = 0.2;
+      } else if (mode === 'rain') {
+        scene.background.setHex(0x060913);
+        scene.fog.color.setHex(0x060913);
+        sunLight.color.setHex(0x475569);
+        sunLight.intensity = 1.2;
+        hemiLight.intensity = 0.35;
       }
     }
 
@@ -1661,6 +1729,9 @@ def generate_3d_html_visualizer(
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      if (composer) {
+        composer.setSize(window.innerWidth, window.innerHeight);
+      }
     });
 
     window.addEventListener('keydown', (e) => {
@@ -1674,7 +1745,7 @@ def generate_3d_html_visualizer(
       else if (e.key === '4') setCameraMode('chase');
       else if (e.key === '5') setCameraMode('cockpit');
       else if (e.key === 'd' || e.key === 'D') {
-        const modes = ['day', 'sunset', 'night'];
+        const modes = ['day', 'sunset', 'night', 'rain'];
         const activeBtn = document.querySelector('.light-btn.active');
         const nextIdx = (
           modes.indexOf(activeBtn.dataset.light) + 1
@@ -1705,11 +1776,26 @@ def generate_3d_html_visualizer(
         updateSimulation(currentTime);
       }
 
+      if (rainMesh && rainMesh.visible) {
+        const rpos = rainGeo.attributes.position.array;
+        for (let i = 0; i < rainCount; i++) {
+          rpos[i * 3 + 1] -= 1.6;
+          if (rpos[i * 3 + 1] < 0) {
+            rpos[i * 3 + 1] = 60;
+          }
+        }
+        rainGeo.attributes.position.needsUpdate = true;
+      }
+
       if (controls.enabled) {
         controls.update();
       }
 
-      renderer.render(scene, camera);
+      if (composer) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
     }
 
     updateSimulation(0);
