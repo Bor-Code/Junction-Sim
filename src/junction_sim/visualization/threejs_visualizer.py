@@ -270,6 +270,91 @@ def generate_3d_html_visualizer(
         "      border: none; color: white; padding: 6px 10px; border-radius: 8px;",
         "      font-size: 0.75rem; font-weight: 700; cursor: pointer;",
         "    }",
+        "    .telemetry-deck {",
+        "      position: absolute; right: 18px; bottom: 120px; width: 290px;",
+        "      padding: 14px; display: none; flex-direction: column; gap: 8px;",
+        "    }",
+        "    .tel-header {",
+        "      display: flex; justify-content: space-between; align-items: center;",
+        "      border-bottom: 1px solid rgba(255, 255, 255, 0.08);",
+        "      padding-bottom: 6px;",
+        "    }",
+        "    .tel-title {",
+        "      font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em;",
+        '      font-family: "JetBrains Mono", monospace; color: #38bdf8;',
+        "    }",
+        "    .tel-badge {",
+        "      font-size: 0.65rem; font-weight: 700; padding: 2px 7px;",
+        "      border-radius: 999px; background: rgba(56, 189, 248, 0.15);",
+        "      color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);",
+        '      font-family: "JetBrains Mono", monospace;',
+        "    }",
+        "    .tel-target-row {",
+        "      display: flex; justify-content: space-between; align-items: center;",
+        '      font-size: 0.74rem; font-family: "JetBrains Mono", monospace;',
+        "    }",
+        "    .tel-veh-tag { font-weight: 700; color: #e2e8f0; }",
+        "    .tel-type-tag {",
+        "      font-size: 0.68rem; color: var(--text-muted);",
+        "      text-transform: uppercase;",
+        "    }",
+        "    .tel-cluster {",
+        "      display: flex; align-items: center; justify-content: space-between;",
+        "      background: rgba(0, 0, 0, 0.3); border-radius: 10px;",
+        "      padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.05);",
+        "    }",
+        "    .tel-speedo { display: flex; align-items: baseline; gap: 4px; }",
+        "    .tel-speed-val {",
+        "      font-size: 2.2rem; font-weight: 900; line-height: 1;",
+        '      font-family: "JetBrains Mono", monospace; color: #f8fafc;',
+        "    }",
+        "    .tel-speed-unit {",
+        "      font-size: 0.72rem; font-weight: 700; color: var(--text-muted);",
+        "      letter-spacing: 0.05em;",
+        "    }",
+        "    .tel-gear-box {",
+        "      display: flex; flex-direction: column; align-items: center;",
+        "      padding: 4px 10px; background: rgba(56, 189, 248, 0.1);",
+        "      border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);",
+        "    }",
+        "    .tel-gear-label {",
+        "      font-size: 0.6rem; font-weight: 700; color: var(--text-muted);",
+        "    }",
+        "    .tel-gear-val {",
+        "      font-size: 1.4rem; font-weight: 900; color: #38bdf8;",
+        '      font-family: "JetBrains Mono", monospace; line-height: 1.1;',
+        "    }",
+        "    .tel-bars { display: flex; flex-direction: column; gap: 5px; }",
+        "    .tel-bar-wrap {",
+        "      display: flex; align-items: center; gap: 8px; font-size: 0.68rem;",
+        '      font-family: "JetBrains Mono", monospace;',
+        "    }",
+        "    .tel-bar-label {",
+        "      width: 28px; font-weight: 700; color: var(--text-muted);",
+        "    }",
+        "    .tel-bar-track {",
+        "      flex: 1; height: 6px; background: rgba(255, 255, 255, 0.08);",
+        "      border-radius: 3px; overflow: hidden;",
+        "    }",
+        "    .tel-bar-fill {",
+        "      height: 100%; width: 0%; transition: width 0.08s ease-out;",
+        "    }",
+        "    .tel-thr-fill { background: linear-gradient(90deg, #10b981, #34d399); }",
+        "    .tel-brk-fill { background: linear-gradient(90deg, #ef4444, #f87171); }",
+        "    .tel-bar-pct {",
+        "      width: 32px; text-align: right; font-weight: 700; color: #cbd5e1;",
+        "    }",
+        "    .tel-mini-stats {",
+        "      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;",
+        "    }",
+        "    .tel-mini-stat {",
+        "      background: rgba(0, 0, 0, 0.2); padding: 5px 8px; border-radius: 6px;",
+        "      display: flex; justify-content: space-between; align-items: center;",
+        '      font-family: "JetBrains Mono", monospace; font-size: 0.7rem;',
+        "    }",
+        "    .tel-stat-lbl { color: var(--text-muted); font-size: 0.64rem; }",
+        "    .tel-stat-val { font-weight: 700; color: #e2e8f0; }",
+        "    }",
         "    .bottom-control-deck {",
         "      display: flex; flex-direction: column; gap: 8px;",
         "      width: 100%; max-width: 900px; margin: 0 auto; padding: 12px 18px;",
@@ -441,6 +526,52 @@ def generate_3d_html_visualizer(
             '      <button class="inspector-btn" id="insp-follow-btn">'
             "Follow in Chase Cam</button>"
         ),
+        "    </div>",
+        '    <div class="glass-card telemetry-deck interactive" id="telemetry-deck">',
+        '      <div class="tel-header">',
+        '        <span class="tel-title">COCKPIT TELEMETRY</span>',
+        '        <span class="tel-badge" id="tel-mode-badge">CHASE CAM</span>',
+        "      </div>",
+        '      <div class="tel-target-row">',
+        '        <span class="tel-veh-tag" id="tel-veh-id">VEH #---</span>',
+        '        <span class="tel-type-tag" id="tel-veh-type">SEDAN</span>',
+        "      </div>",
+        '      <div class="tel-cluster">',
+        '        <div class="tel-speedo">',
+        '          <span class="tel-speed-val" id="tel-speed">0</span>',
+        '          <span class="tel-speed-unit">KM/H</span>',
+        "        </div>",
+        '        <div class="tel-gear-box">',
+        '          <span class="tel-gear-label">GEAR</span>',
+        '          <span class="tel-gear-val" id="tel-gear">N</span>',
+        "        </div>",
+        "      </div>",
+        '      <div class="tel-bars">',
+        '        <div class="tel-bar-wrap">',
+        '          <span class="tel-bar-label">THR</span>',
+        '          <div class="tel-bar-track">',
+        '            <div class="tel-bar-fill tel-thr-fill" id="tel-thr-fill"></div>',
+        "          </div>",
+        '          <span class="tel-bar-pct" id="tel-thr-val">0%</span>',
+        "        </div>",
+        '        <div class="tel-bar-wrap">',
+        '          <span class="tel-bar-label">BRK</span>',
+        '          <div class="tel-bar-track">',
+        '            <div class="tel-bar-fill tel-brk-fill" id="tel-brk-fill"></div>',
+        "          </div>",
+        '          <span class="tel-bar-pct" id="tel-brk-val">0%</span>',
+        "        </div>",
+        "      </div>",
+        '      <div class="tel-mini-stats">',
+        '        <div class="tel-mini-stat">',
+        '          <span class="tel-stat-lbl">STEER</span>',
+        '          <span class="tel-stat-val" id="tel-steer-val">0°</span>',
+        "        </div>",
+        '        <div class="tel-mini-stat">',
+        '          <span class="tel-stat-lbl">ACCEL</span>',
+        '          <span class="tel-stat-val" id="tel-acc-val">0.0 m/s²</span>',
+        "        </div>",
+        "      </div>",
         "    </div>",
         '    <div class="glass-card bottom-control-deck interactive">',
         '      <div class="scrubber-row">',
@@ -1372,6 +1503,15 @@ def generate_3d_html_visualizer(
         controls.enabled = true;
         camera.position.set(0, 85, 45);
         controls.target.set(0, 0, 0);
+      } else if (mode === 'chase' || mode === 'cockpit') {
+        if (!selectedVehicleId) {
+          for (const [vid, states] of Object.entries(trajectories)) {
+            if (getInterpolatedState(states, currentTime)) {
+              selectedVehicleId = vid;
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -1539,8 +1679,35 @@ def generate_3d_html_visualizer(
 
       document.getElementById('hud-active-veh').textContent = activeCount;
 
+      const isFollow = (
+        currentCameraMode === 'chase' || currentCameraMode === 'cockpit'
+      );
+      if (isFollow && !selectedState) {
+        for (const [vid, states] of Object.entries(trajectories)) {
+          const st = getInterpolatedState(states, t);
+          if (st) {
+            selectedVehicleId = vid;
+            selectedState = st;
+            break;
+          }
+        }
+      }
+
       if (selectedState) {
         updateInspector(selectedState);
+      }
+
+      const telDeck = document.getElementById('telemetry-deck');
+      if (telDeck) {
+        const isFollowCam = (
+          currentCameraMode === 'chase' || currentCameraMode === 'cockpit'
+        );
+        if (selectedState && (isFollowCam || inspector.style.display === 'flex')) {
+          telDeck.style.display = 'flex';
+          updateTelemetryDeck(selectedState);
+        } else {
+          telDeck.style.display = 'none';
+        }
       }
 
       updateFollowCamera(selectedState);
@@ -1679,6 +1846,48 @@ def generate_3d_html_visualizer(
       document.getElementById('insp-heading').textContent = `${degStr}°`;
       document.getElementById('insp-signal').textContent = (
         st.turn_signal.toUpperCase()
+      );
+    }
+
+    function updateTelemetryDeck(st) {
+      const spdKmh = Math.round(st.speed * 3.6);
+      document.getElementById('tel-speed').textContent = spdKmh;
+      document.getElementById('tel-veh-id').textContent = `VEH #${st.vehicle_id}`;
+      document.getElementById('tel-veh-type').textContent = (
+        st.vehicle_type.replace('_', ' ').toUpperCase()
+      );
+      const modeLabel = currentCameraMode === 'cockpit' ? 'COCKPIT CAM' : (
+        currentCameraMode === 'chase' ? 'CHASE CAM' : 'TARGET TELEMETRY'
+      );
+      document.getElementById('tel-mode-badge').textContent = modeLabel;
+
+      let gear = 'N';
+      if (spdKmh > 1) {
+        if (spdKmh < 18) gear = '1';
+        else if (spdKmh < 35) gear = '2';
+        else if (spdKmh < 52) gear = '3';
+        else if (spdKmh < 70) gear = '4';
+        else gear = '5';
+      }
+      document.getElementById('tel-gear').textContent = gear;
+
+      const thrPct = Math.max(
+        0, Math.min(100, Math.round((st.acceleration / 2.8) * 100))
+      );
+      const brkPct = st.brake_light ? 100 : Math.max(
+        0, Math.min(100, Math.round((-st.acceleration / 4.0) * 100))
+      );
+
+      document.getElementById('tel-thr-fill').style.width = `${thrPct}%`;
+      document.getElementById('tel-thr-val').textContent = `${thrPct}%`;
+      document.getElementById('tel-brk-fill').style.width = `${brkPct}%`;
+      document.getElementById('tel-brk-val').textContent = `${brkPct}%`;
+
+      const steerDeg = Math.round(st.steering_angle * 180 / Math.PI);
+      const sign = steerDeg > 0 ? '+' : '';
+      document.getElementById('tel-steer-val').textContent = `${sign}${steerDeg}°`;
+      document.getElementById('tel-acc-val').textContent = (
+        `${st.acceleration.toFixed(2)} m/s²`
       );
     }
 
