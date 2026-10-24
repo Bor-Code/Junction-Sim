@@ -6,6 +6,14 @@ from junction_sim.engine.arrival import (
     PedestrianDemandProfile,
 )
 from junction_sim.engine.clock import SimulationClock
+from junction_sim.engine.emissions import (
+    EmissionsResult,
+    EmissionVehicleCategory,
+    InstantaneousEmissions,
+    compute_benchmark_emissions,
+    compute_instantaneous_emissions,
+    compute_trajectory_emissions,
+)
 from junction_sim.engine.engine import SimulationEngine
 from junction_sim.engine.idm import (
     DRIVER_PROFILES,
@@ -35,7 +43,10 @@ __all__ = [
     "DemandInterval",
     "DemandProfile",
     "DriverProfile",
+    "EmissionVehicleCategory",
+    "EmissionsResult",
     "IDMParameters",
+    "InstantaneousEmissions",
     "LaneQueue",
     "PedestrianArrivalGenerator",
     "PedestrianDemandProfile",
@@ -49,8 +60,11 @@ __all__ = [
     "TrajectoryEngine",
     "VehicleState3D",
     "VehicleType",
+    "compute_benchmark_emissions",
     "compute_bezier_point",
     "compute_idm_acceleration",
+    "compute_instantaneous_emissions",
+    "compute_trajectory_emissions",
     "export_trajectories_to_dict",
     "get_driver_profile",
     "sample_scene_vehicles",

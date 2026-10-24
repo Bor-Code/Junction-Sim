@@ -22,6 +22,8 @@ class MultiSeedMetrics(BaseModel):
     mean_completion_rate: float = Field(ge=0.0, le=100.0)
     mean_max_queue: float = Field(ge=0.0)
     mean_wasted_green: float = Field(ge=0.0)
+    mean_fuel_consumed: float = Field(default=0.0, ge=0.0)
+    mean_co2_emitted: float = Field(default=0.0, ge=0.0)
 
 
 class MultiSeedBenchmarkResult(BaseModel):
@@ -77,6 +79,11 @@ def aggregate_seed_metrics(
     mean_q = round(statistics.mean(max_queues), 2)
     mean_wasted = round(statistics.mean(wasted_greens), 3)
 
+    fuels = [m.fuel_consumed_liters for m in runs_metrics]
+    co2s = [m.co2_emitted_kg for m in runs_metrics]
+    mean_fuel = round(statistics.mean(fuels), 4)
+    mean_co2 = round(statistics.mean(co2s), 4)
+
     return MultiSeedMetrics(
         controller_name=controller_name,
         runs=n,
@@ -89,4 +96,6 @@ def aggregate_seed_metrics(
         mean_completion_rate=mean_comp,
         mean_max_queue=mean_q,
         mean_wasted_green=mean_wasted,
+        mean_fuel_consumed=mean_fuel,
+        mean_co2_emitted=mean_co2,
     )

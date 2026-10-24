@@ -11,6 +11,7 @@ from junction_sim.domain.intersection import Intersection
 from junction_sim.domain.signal import SignalPlan
 from junction_sim.domain.validation import validate_signal_plan_against_intersection
 from junction_sim.engine.arrival import DemandProfile
+from junction_sim.engine.emissions import compute_benchmark_emissions
 from junction_sim.engine.engine import SimulationEngine
 from junction_sim.engine.transition import SignalState
 from junction_sim.exceptions import ValidationError
@@ -129,6 +130,7 @@ class BenchmarkHarness:
                 if active_phase_queue == 0 and len(r.discharged_vehicles) == 0:
                     wasted_steps += 1
         wasted_green_time = round(wasted_steps * self._step_size, 3)
+        emissions = compute_benchmark_emissions(results, self._step_size)
 
         return BenchmarkMetrics(
             controller_name=name,
@@ -141,6 +143,8 @@ class BenchmarkHarness:
             max_queue=max_queue,
             phase_switch_count=phase_switch_count,
             wasted_green_time=wasted_green_time,
+            fuel_consumed_liters=emissions.fuel_liters,
+            co2_emitted_kg=emissions.co2_kg,
         )
 
     def run_benchmark(

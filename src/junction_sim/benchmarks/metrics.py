@@ -16,6 +16,8 @@ class BenchmarkMetrics(BaseModel):
     max_queue: int = Field(ge=0)
     phase_switch_count: int = Field(ge=0)
     wasted_green_time: float = Field(ge=0.0)
+    fuel_consumed_liters: float = Field(default=0.0, ge=0.0)
+    co2_emitted_kg: float = Field(default=0.0, ge=0.0)
 
 
 class BenchmarkResult(BaseModel):
