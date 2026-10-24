@@ -28,6 +28,12 @@ from junction_sim.reporting.json_reporter import (
     export_multi_seed_benchmark_to_json,
     export_step_results_to_json,
 )
+from junction_sim.rl import (
+    JunctionEnv,
+    QLearningAgent,
+    QLearningController,
+    train_q_learning,
+)
 from junction_sim.visualization import (
     export_3d_html_visualizer,
     export_interactive_html,
@@ -55,9 +61,14 @@ def instantiate_controller(
         return DualRingController(
             dual_ring=structure, signal_plan=signal_plan, intersection=intersection
         )
+    if name in ("q-learning", "rl"):
+        agent = QLearningAgent(action_size=len(signal_plan.phases))
+        return QLearningController(
+            agent=agent, signal_plan=signal_plan, intersection=intersection
+        )
     raise ConfigurationError(
         f"unknown controller '{name}', expected one of: "
-        "fixed-time, actuated, max-pressure, dual-ring"
+        "fixed-time, actuated, max-pressure, dual-ring, q-learning"
     )
 
 
@@ -349,5 +360,32 @@ def handle_visualize(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> i
         resolved_uri = Path(out_html).resolve().as_uri()
         webbrowser.open(resolved_uri)
         stdout.write(f"Opened visualizer in browser: {resolved_uri}\n")
+
+    return 0
+
+
+def handle_train(args: argparse.Namespace, stdout: TextIO = sys.stdout) -> int:
+    scenario = load_scenario_from_args(args)
+    episodes = getattr(args, "episodes", 10)
+    reward_type = getattr(args, "reward_type", "queue_penalty")
+
+    env = JunctionEnv(scenario=scenario, reward_type=reward_type)
+    agent, rewards = train_q_learning(env=env, episodes=episodes)
+
+    preset_or_name = getattr(args, "preset", None) or "custom"
+    out_model = getattr(args, "out_model", None)
+    if out_model is not None:
+        agent.save(out_model)
+
+    stdout.write("Q-Learning Controller Training Complete\n")
+    stdout.write(f"Scenario:        {preset_or_name}\n")
+    stdout.write(f"Episodes:        {episodes}\n")
+    stdout.write(f"Reward Type:     {reward_type}\n")
+    stdout.write(f"Final Epsilon:   {agent.epsilon:.4f}\n")
+    stdout.write(f"Q-Table States:  {len(agent.q_table)}\n")
+    avg_reward = sum(rewards) / len(rewards) if rewards else 0.0
+    stdout.write(f"Avg Reward:      {avg_reward:.2f}\n")
+    if out_model is not None:
+        stdout.write(f"Saved Model:     {out_model}\n")
 
     return 0
